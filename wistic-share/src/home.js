@@ -116,7 +116,7 @@ details a{color:var(--gr)}
   .facts{gap:10px}
   .facts li{padding:14px 16px}
   .cta{gap:8px}
-  .cta .btn{flex:1 1 calc(50% - 4px);text-align:center;padding:12px 12px}
+  .cta .btn{flex:1 1 calc(50% - 4px);text-align:center;padding:11px 14px}
   .cta .btn.pri{flex:1 1 100%}
   .app{grid-template-columns:1fr}
   .sb{flex-direction:row;flex-wrap:wrap;gap:12px;padding:12px;border-right:0;border-bottom:1px solid var(--bd)}

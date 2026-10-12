@@ -29,9 +29,9 @@ footer{padding:26px 0 max(30px,env(safe-area-inset-bottom));color:var(--mu);font
 @media(max-width:780px){.cr{grid-template-columns:1fr;gap:6px}.cr.ch{display:none}.cr div:before{content:attr(data-l);display:block;font-size:.78rem;font-weight:600;color:var(--mu);margin-top:6px}.top a.nbtn{display:none}}
 @media(max-width:520px){.btn{text-align:center}.cta .btn{flex:1 1 100%}}
 @media(max-width:600px){
-  body{font-size:16px}
   section{padding:clamp(36px,9vw,56px) 0}
   h2{margin-bottom:22px}
+  .btn{font-size:.9rem;padding:11px 16px}
   .top{gap:0}
   .top a{padding:8px 10px;font-size:.88rem}
   .brand{font-size:1.05rem}
