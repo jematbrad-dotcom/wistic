@@ -44,7 +44,7 @@ export function dlInfo(env) {
 export function shell(env, { title, desc, css = '', body }, assets = { favicon: '/favicon.png' }) {
   const i = dlInfo(env);
   return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title>
-<meta name="description" content="${esc(desc)}"><meta property="og:site_name" content="Wistic"><meta property="og:type" content="website"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}"><meta name="theme-color" content="#0e1110">
+<meta name="description" content="${esc(desc)}"><meta property="og:site_name" content="Wistic"><meta property="og:type" content="website"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}"><meta name="theme-color" content="#0b0c0b">
 <link rel="icon" type="image/png" href="${assets.favicon}">
 <style>${BASE_CSS}${css}</style></head>
 <body>
