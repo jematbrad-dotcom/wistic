@@ -167,7 +167,7 @@ const CSS = `
 :root{color-scheme:dark;--bg:#0b0c0b;--pn:#101210;--bd:#1f231e;--tx:#eef1ea;--mu:#78806f;--ac:#7ea85c;--ac2:#42582f;--gr:#c9e8a0}
 *{box-sizing:border-box}html,body{margin:0}
 body{background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh;overflow-x:hidden}
-main{max-width:1120px;margin:0 auto;padding:max(20px,env(safe-area-inset-top)) 20px 32px}
+main{max-width:1440px;margin:0 auto;padding:max(20px,env(safe-area-inset-top)) 20px 32px}
 .brand{display:inline-flex;align-items:center;gap:9px;color:var(--tx);text-decoration:none;font:800 1.1rem system-ui,sans-serif;margin:6px 0 18px}
 .brand img{height:36px;width:auto;display:block}
 .brand img.mark{height:72px;width:72px}

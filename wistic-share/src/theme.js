@@ -5,7 +5,7 @@ export const BASE_CSS = `
 :root{color-scheme:dark;--bg:#0b0c0b;--pn:#101210;--pn2:#151815;--bd:#1f231e;--tx:#eef1ea;--tx2:#b7beb1;--mu:#78806f;--ac:#7ea85c;--ac2:#42582f;--gr:#c9e8a0;--on:#0e130b}
 *{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:76px}
 body{margin:0;background:var(--bg);color:var(--tx);font:17px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-text-size-adjust:100%;overflow-x:hidden}
-a{color:inherit}.wrap{max-width:1200px;margin:0 auto;padding:0 clamp(20px,5vw,72px)}
+a{color:inherit}.wrap{width:100%;max-width:2100px;margin:0 auto;padding:0 clamp(20px,4.5vw,64px)}
 h1,h2,h3,summary,.d{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:-.02em;margin:0}
 header{position:sticky;top:0;z-index:20;padding-top:env(safe-area-inset-top);background:#0b0c0bd0;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--bd)}
 header .wrap{display:flex;justify-content:space-between;align-items:center;height:60px}
@@ -21,7 +21,7 @@ section{padding:clamp(44px,7vw,84px) 0}
 h2{font-weight:800;font-size:clamp(1.75rem,4.5vw,2.6rem);line-height:1.08;margin:0 0 28px;max-width:20ch}
 .card{background:var(--pn);border:1px solid var(--bd);border-radius:12px;padding:24px}
 kbd{font:600 .88em system-ui,sans-serif;background:var(--bg);border:1px solid #3a4038;border-bottom-width:3px;border-radius:6px;padding:1px 8px;color:var(--tx)}
-.cmp{border:1px solid var(--bd);border-radius:12px;overflow:hidden;background:var(--pn)}
+.cmp{border:1px solid var(--bd);border-radius:12px;overflow:hidden;background:var(--pn);max-width:1680px}
 .cr{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,5fr) minmax(0,5fr);gap:clamp(14px,3vw,40px);padding:18px clamp(18px,3vw,28px);border-top:1px solid var(--bd)}.cr:first-child{border-top:0}
 .cr.ch{background:var(--pn2);font:800 1.05rem system-ui,sans-serif;padding-block:14px}.cr.ch div:nth-child(2){color:var(--gr)}
 .cr b{font-weight:600}.cr .mu{color:var(--mu)}.cr .w{background:#7ea85c1f;border-radius:8px;padding:10px 14px;margin:-10px 0}.ok{color:var(--gr);font-weight:800}

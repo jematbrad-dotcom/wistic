@@ -20,28 +20,28 @@ const FEATS = [
 
 const CSS = `
 /* ---------- hero: tekst links, beeld rechts ---------- */
-.hero{display:grid;grid-template-columns:minmax(0,1.02fr) minmax(0,.98fr);gap:clamp(24px,4vw,56px);align-items:center;padding:clamp(36px,6vw,76px) 0 clamp(26px,4vw,44px)}
-.hero h1{font-weight:800;font-size:clamp(2.5rem,6.4vw,5.2rem);line-height:.96;letter-spacing:-.04em;margin:0 0 20px;max-width:11ch}
-.hero .lead{font-size:clamp(1.05rem,1.9vw,1.22rem);color:var(--tx2);max-width:31em;margin:0 0 26px}
+.hero{display:grid;grid-template-columns:minmax(0,1.06fr) minmax(0,.94fr);gap:clamp(24px,4vw,64px);align-items:center;padding:clamp(36px,5vw,84px) 0 clamp(26px,4vw,48px)}
+.hero h1{font-weight:800;font-size:clamp(2.5rem,5.8vw,6.6rem);line-height:.95;letter-spacing:-.045em;margin:0 0 22px;max-width:11ch}
+.hero .lead{font-size:clamp(1.05rem,1.55vw,1.4rem);color:var(--tx2);max-width:32em;margin:0 0 28px}
 .hero .note{margin:16px 0 0}
 .rec{background:var(--pn);border:1px solid var(--bd);border-radius:14px;overflow:hidden}
-.rec-bar{display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--pn2);border-bottom:1px solid var(--bd);font:600 12px/1 system-ui,sans-serif;color:var(--mu)}
+.rec-bar{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--pn2);border-bottom:1px solid var(--bd);font:600 13px/1 system-ui,sans-serif;color:var(--mu)}
 .rec-bar .dot{width:9px;height:9px;border-radius:50%;background:#c2504c}
 .rec-bar .nm{color:var(--tx2)}
 .rec-bar .tm{margin-left:auto;font-variant-numeric:tabular-nums}
-.rec-screen{position:relative;aspect-ratio:16/10;background:linear-gradient(155deg,#1d2518 0%,#0d0f0c 55%,#141b12 100%)}
+.rec-screen{position:relative;aspect-ratio:16/9;background:linear-gradient(155deg,#1d2518 0%,#0d0f0c 55%,#141b12 100%)}
 .rec-screen:before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,#ffffff08 0 1px,transparent 1px 3px)}
-.play{position:absolute;left:50%;top:50%;width:62px;height:62px;margin:-31px 0 0 -31px;border-radius:50%;background:var(--ac);display:grid;place-items:center;box-shadow:0 10px 30px -12px #000}
-.play:after{content:"";border-left:15px solid var(--on);border-top:9px solid transparent;border-bottom:9px solid transparent;margin-left:4px}
-.keycap{position:absolute;right:14px;bottom:14px;font:800 12px/1 system-ui,sans-serif;color:var(--tx2);background:var(--pn);border:1px solid var(--bd);border-bottom-width:3px;border-radius:8px;padding:8px 10px}
-.rec-foot{display:flex;align-items:center;gap:10px;padding:13px 14px;border-top:1px solid var(--bd);font:700 13px/1.4 system-ui,sans-serif}
+.play{position:absolute;left:50%;top:50%;width:clamp(56px,5vw,86px);height:clamp(56px,5vw,86px);margin-left:calc(clamp(56px,5vw,86px)/-2);margin-top:calc(clamp(56px,5vw,86px)/-2);border-radius:50%;background:var(--ac);display:grid;place-items:center;box-shadow:0 10px 30px -12px #000}
+.play:after{content:"";border-left:16px solid var(--on);border-top:10px solid transparent;border-bottom:10px solid transparent;margin-left:4px}
+.keycap{position:absolute;right:16px;bottom:16px;font:800 13px/1 system-ui,sans-serif;color:var(--tx2);background:var(--pn);border:1px solid var(--bd);border-bottom-width:3px;border-radius:8px;padding:9px 11px}
+.rec-foot{display:flex;align-items:center;gap:10px;padding:14px 16px;border-top:1px solid var(--bd);font:700 14px/1.4 system-ui,sans-serif}
 .rec-foot span{color:var(--mu);font-weight:400}
 
 /* ---------- feitenrij links naar rechts ---------- */
-.facts{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
-.facts li{background:var(--pn);border:1px solid var(--bd);border-radius:12px;padding:16px 18px}
-.facts b{display:block;font:800 1.45rem/1.15 system-ui,sans-serif;letter-spacing:-.02em;margin-bottom:5px}
-.facts span{color:var(--tx2);font-size:.9rem}
+.facts{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.facts li{background:var(--pn);border:1px solid var(--bd);border-radius:12px;padding:18px 22px}
+.facts b{display:block;font:800 clamp(1.45rem,1.7vw,2.1rem)/1.15 system-ui,sans-serif;letter-spacing:-.02em;margin-bottom:6px}
+.facts span{color:var(--tx2);font-size:.95rem}
 
 /* ---------- stappen links naar rechts met pijlen ---------- */
 .steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
@@ -75,7 +75,7 @@ const CSS = `
 .band:before{content:"";position:absolute;top:0;bottom:0;left:50%;width:100vw;transform:translateX(-50%);background:var(--pn2);border-block:1px solid var(--bd);z-index:-1}
 
 /* ---------- functies in rijen ---------- */
-.rows{display:grid;border-top:1px solid var(--bd)}
+.rows{display:grid;border-top:1px solid var(--bd);max-width:1680px}
 .rows .row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:clamp(16px,4vw,48px);padding:17px 4px;border-bottom:1px solid var(--bd);align-items:baseline}
 .rows h3{font-weight:700;font-size:1.05rem;margin:0;color:var(--tx)}
 .rows span{color:var(--tx2);font-size:.95rem}
