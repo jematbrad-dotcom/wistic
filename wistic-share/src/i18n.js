@@ -73,6 +73,11 @@ const PAIRS = [
   ['Klaar voor je eerste clip?', 'Ready for your first clip?'],
   ['Hulp nodig? Open een ticket', 'Need help? Open a ticket'],
   ['Wistic. Geen overlay, alleen clips.', 'Wistic. No overlay, just clips.'],
+  ['Clip opgeslagen', 'Clip saved'],
+  ['Standaard opname', 'Default recording'],
+  ['Kies je eigen lengte', 'Choose your own length'],
+  ['Lange opname', 'Long recording'],
+  ['Bij het delen', 'When you share'],
 
   // ----- supportpagina -----
   ['Een bug gevonden, een vraag of een idee? Open hier een ticket. Alleen de maker van Wistic kan het lezen. Je kunt screenshots en andere bestanden meesturen.',
