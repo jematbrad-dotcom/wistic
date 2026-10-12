@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Build output — regenerated with `npm run dist`, never commit this
+dist/
+
+# Real credentials (start from firebase-config.example.js instead)
+firebase-config.js
+
+# Personal notes & rollout docs (private, not part of the public repo)
+DEV-NOTES.md
+wistic-share/NIEUWE-UPDATE.md
+
+# OS & editor junk
+Thumbs.db
+Desktop.ini
+.DS_Store

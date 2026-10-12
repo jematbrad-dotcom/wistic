@@ -1,0 +1,54 @@
+{
+  "name": "wistic",
+  "version": "0.1.6",
+  "description": "Wistic - no overlay, just clips",
+  "author": "Wistic",
+  "main": "main.js",
+  "scripts": {
+    "setup": "node node_modules/electron/install.js && node node_modules/ffmpeg-static/install.js",
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "dependencies": {
+    "ffmpeg-static": "^5.2.0",
+    "electron-updater": "^6.3.9",
+    "discord-rpc": "^4.0.1"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "nl.blips.app",
+    "productName": "Wistic",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "icon.png",
+      "artifactName": "Wistic-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false
+    },
+    "asarUnpack": [
+      "node_modules/ffmpeg-static/**"
+    ],
+    "files": [
+      "*.js",
+      "*.html",
+      "icon.png"
+    ],
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://wistic.net/updates"
+      }
+    ]
+  }
+}

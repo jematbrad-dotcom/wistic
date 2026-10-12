@@ -1,0 +1,59 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;background:transparent;font:13px/1.4 system-ui,Segoe UI,sans-serif;color:#ededed}
+#t{position:absolute;inset:8px;display:flex;gap:12px;align-items:center;padding:10px;border-radius:16px;background:linear-gradient(135deg,#0b0b0b,#050505);border:1px solid #262626;box-shadow:0 10px 30px #000a;overflow:hidden;transform:translateX(120%);opacity:0;transition:transform .35s cubic-bezier(.2,.9,.3,1),opacity .25s}
+#t.in{transform:none;opacity:1}
+#im{width:128px;height:72px;border-radius:10px;background:#000000 center/cover no-repeat;flex:none;border:1px solid #262626}
+#tx{min-width:0;flex:1}#ti{font-weight:700;font-size:14px}#su{color:#8b8b8b;font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#bw{position:absolute;left:0;right:0;bottom:0;height:4px;background:#1a1a1a}#bar{height:100%;width:0;background:linear-gradient(90deg,#555555,#555555);transition:width .3s}
+#t.done #bar{background:#555555}#t.err #bar{background:#ff5d5d}
+</style></head><body><div id="t"><div id="im"></div><div id="tx"><div id="ti"></div><div id="su"></div></div><div id="bw"><div id="bar"></div></div></div>
+<script>
+const t=document.getElementById('t');
+function set(d){
+  if(d.img)document.getElementById('im').style.backgroundImage='url('+d.img+')';
+  if(d.title!=null)document.getElementById('ti').textContent=d.title;
+  if(d.sub!=null)document.getElementById('su').textContent=d.sub;
+  if(d.pct!=null)document.getElementById('bar').style.width=Math.round(d.pct*100)+'%';
+  t.className='in'+(d.state==='done'?' done':d.state==='err'?' err':'');
+}
+function hide(){t.className='';}
+
+// ---- Eigen clip-geluid: 1x laden en decoderen, daarna direct afspelen (geen vertraging) ----
+let ac=null,gain=null,buf=null;
+function actx(){
+  if(!ac){
+    ac=new AudioContext({latencyHint:'interactive'});
+    gain=ac.createGain();gain.connect(ac.destination);
+    ac.onstatechange=()=>{if(ac.state!=='running')ac.resume().catch(()=>{});};
+  }
+  return ac;
+}
+// mp3's beginnen vaak met een beetje stilte; dat voelt als vertraging, dus we knippen dat weg
+function trim(b){
+  const d=b.getChannelData(0);let s=0;
+  while(s<d.length&&Math.abs(d[s])<0.01)s++;
+  s=Math.max(0,s-Math.floor(b.sampleRate*0.002));
+  if(!s||s>=b.length)return b;
+  const o=actx().createBuffer(b.numberOfChannels,b.length-s,b.sampleRate);
+  for(let c=0;c<b.numberOfChannels;c++)o.copyToChannel(b.getChannelData(c).subarray(s),c);
+  return o;
+}
+async function loadSound(b64){
+  try{
+    const c=actx(),bin=atob(b64),u=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+    buf=trim(await c.decodeAudioData(u.buffer));
+    if(c.state!=='running')await c.resume();
+    const w=c.createBufferSource();w.buffer=c.createBuffer(1,1,c.sampleRate);w.connect(c.destination);w.start(0); // opwarmen
+    return true;
+  }catch(e){buf=null;return false;}
+}
+function clearSound(){buf=null;}
+function playSound(v){
+  if(!buf||!ac)return false;
+  if(ac.state!=='running')ac.resume().catch(()=>{});
+  gain.gain.value=Math.max(0,Math.min(1,v));
+  const s=ac.createBufferSource();s.buffer=buf;s.connect(gain);s.start(0);
+  return true;
+}
+</script></body></html>

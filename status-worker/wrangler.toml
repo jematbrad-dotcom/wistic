@@ -1,0 +1,11 @@
+name = "wistic-status"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+[triggers]
+crons = ["* * * * *"]
+
+[[kv_namespaces]]
+binding = "STATUS"
+id = "b59b9d125d3846b3b3e4c38f5dcbda93"   # komt uit: npx wrangler kv namespace create STATUS
+
