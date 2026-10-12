@@ -34,11 +34,11 @@ export const PARTIES = [
 ];
 
 const CSS = `
-.hd{padding:clamp(44px,7vw,96px) 0 20px}.hd h1{font-weight:800;font-size:clamp(2.4rem,6vw,4.6rem);line-height:1;max-width:14ch;margin-bottom:16px}
-.lead{font-size:1.2rem;color:var(--tx2);max-width:38em;margin:0 0 26px}
+.hd{padding:clamp(40px,6vw,80px) 0 16px}.hd h1{font-weight:800;font-size:clamp(2.2rem,5.5vw,4rem);line-height:1;max-width:14ch;margin-bottom:14px}
+.lead{font-size:1.1rem;color:var(--tx2);max-width:38em;margin:0 0 22px}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
-.vs{padding:clamp(28px,5vw,48px) 0}.vs h2{font-size:clamp(1.6rem,4vw,2.2rem);margin-bottom:20px;max-width:none}
-.fine{color:var(--mu);font-size:.86rem;max-width:54em;margin:26px 0 0}
+.vs{padding:clamp(24px,4vw,40px) 0}.vs h2{font-size:clamp(1.4rem,3.5vw,2rem);margin-bottom:18px;max-width:none}
+.fine{color:var(--mu);font-size:.85rem;max-width:54em;margin:22px 0 0}
 `;
 
 export function vergelijkingenPage(env, assets) {

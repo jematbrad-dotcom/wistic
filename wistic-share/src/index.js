@@ -161,39 +161,37 @@ async function touch(env, id, view) {
   else await env.DB.prepare('UPDATE clips SET last_viewed=? WHERE id=? AND last_viewed<?').bind(now, id, now - 3600e3).run();
 }
 
-const HEAD = (title, extra = '') => `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title>${extra}<link rel="icon" type="image/png" href="/favicon.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap" rel="stylesheet"><style>${CSS}</style></head>`;
+const HEAD = (title, extra = '') => `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title>${extra}<link rel="icon" type="image/png" href="/favicon.png"><style>${CSS}</style></head>`;
 
 const CSS = `
-:root{color-scheme:dark;--bg:#111314;--pn:#181b1c;--bd:#2a2f2d;--tx:#eef1ea;--mu:#909a8f;--ac:#86ad63;--ac2:#4f6b3a;--gr:#c4e39a}
+:root{color-scheme:dark;--bg:#0b0c0b;--pn:#101210;--bd:#1f231e;--tx:#eef1ea;--mu:#78806f;--ac:#7ea85c;--ac2:#42582f;--gr:#c9e8a0}
 *{box-sizing:border-box}html,body{margin:0}
-body{background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh;position:relative;overflow-x:hidden}
-.glow{position:fixed;inset:-80px;background-size:cover;background-position:center;filter:blur(90px) saturate(1.4);opacity:.38;z-index:0;pointer-events:none}
-.glow.none{background:radial-gradient(60% 50% at 50% 0%,#7da35e30,transparent)}
-main{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding:max(20px,env(safe-area-inset-top)) 20px 32px}
-.brand{display:inline-flex;align-items:center;gap:9px;color:var(--tx);text-decoration:none;font:800 1.15rem "Bricolage Grotesque",system-ui,sans-serif;margin:6px 0 18px}
-.brand img{height:40px;width:auto;display:block}
-.brand img.mark{height:84px;width:84px}
-.stage{background:#000;border:1px solid var(--bd);border-radius:16px;overflow:hidden;box-shadow:0 30px 80px #000a;aspect-ratio:16/9;max-height:78vh;width:100%}
+body{background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh;overflow-x:hidden}
+main{max-width:1120px;margin:0 auto;padding:max(20px,env(safe-area-inset-top)) 20px 32px}
+.brand{display:inline-flex;align-items:center;gap:9px;color:var(--tx);text-decoration:none;font:800 1.1rem system-ui,sans-serif;margin:6px 0 18px}
+.brand img{height:36px;width:auto;display:block}
+.brand img.mark{height:72px;width:72px}
+.stage{background:#000;border:1px solid var(--bd);border-radius:12px;overflow:hidden;aspect-ratio:16/9;max-height:78vh;width:100%}
 video{width:100%;height:100%;display:block;background:#000}
-.info{display:flex;gap:20px;justify-content:space-between;align-items:flex-start;margin-top:22px;flex-wrap:wrap}
-h1{font:800 clamp(1.6rem,4.2vw,2.5rem)/1.1 "Bricolage Grotesque",system-ui,sans-serif;letter-spacing:-.02em;margin:0 0 10px;overflow-wrap:anywhere}
-.meta{display:flex;flex-wrap:wrap;gap:6px 18px;color:var(--mu);font-size:.93rem}
+.info{display:flex;gap:20px;justify-content:space-between;align-items:flex-start;margin-top:20px;flex-wrap:wrap}
+h1{font:800 clamp(1.5rem,4vw,2.3rem)/1.1 system-ui,sans-serif;letter-spacing:-.02em;margin:0 0 10px;overflow-wrap:anywhere}
+.meta{display:flex;flex-wrap:wrap;gap:6px 18px;color:var(--mu);font-size:.92rem}
 .meta b{color:var(--tx);font-weight:600}
 .act{display:flex;gap:10px;flex-wrap:wrap}
-.btn{appearance:none;border:1px solid var(--bd);background:var(--pn);color:var(--tx);font:600 .95rem system-ui,sans-serif;padding:11px 18px;border-radius:11px;cursor:pointer;text-decoration:none;display:inline-block}
-.btn:hover{border-color:var(--ac2);background:#20251f}
-.btn.pri{background:var(--ac);border-color:var(--ac);color:#10150f}.btn.pri:hover{background:#9bc176}
+.btn{appearance:none;border:1px solid var(--bd);background:var(--pn);color:var(--tx);font:600 .95rem system-ui,sans-serif;padding:11px 18px;border-radius:8px;cursor:pointer;text-decoration:none;display:inline-block}
+.btn:hover{border-color:var(--ac2);background:var(--pn2)}
+.btn.pri{background:var(--ac);border-color:var(--ac);color:#0e130b}.btn.pri:hover{background:#8fb96a}
 .btn.ok{background:var(--gr);border-color:var(--gr);color:#04140c}
 .btn:focus-visible,a:focus-visible,video:focus-visible{outline:2px solid #b9d99a;outline-offset:3px}
-footer{margin-top:34px;color:var(--mu);font-size:.85rem;max-width:62ch}
+footer{margin-top:30px;color:var(--mu);font-size:.85rem;max-width:62ch}
 .gone{max-width:520px;margin:18vh auto 0;text-align:left}
-.gone h1{font-size:clamp(1.8rem,5vw,2.6rem)}.gone p{color:var(--mu);margin:0 0 22px}
-@media (max-width:640px){main{padding-left:14px;padding-right:14px}.stage{border-radius:12px}.act{width:100%}.act .btn{flex:1;text-align:center}}
+.gone h1{font-size:clamp(1.7rem,5vw,2.4rem)}.gone p{color:var(--mu);margin:0 0 22px}
+@media (max-width:640px){main{padding-left:14px;padding-right:14px}.stage{border-radius:10px}.act{width:100%}.act .btn{flex:1;text-align:center}}
 `;
 
 const BRAND = `<a class="brand" href="/"><img class="mark" src="/favicon.png" width="84" height="84" alt="Wistic"></a>`;
 const html = (b, s = 200) => new Response(b, { status: s, headers: { 'content-type': 'text/html; charset=utf-8',
-  'content-security-policy': "default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+  'content-security-policy': "default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
   'referrer-policy': 'no-referrer', 'x-content-type-options': 'nosniff' } });
 
 function fmtDate(t) { try { return new Date(t).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Amsterdam' }); } catch (e) { return ''; } }
@@ -203,9 +201,9 @@ function watch(r, base) {
   const og = `<meta name="robots" content="noindex"><meta property="og:site_name" content="Wistic"><meta property="og:type" content="video.other"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc([r.game, r.author].filter(Boolean).join(' - ') || 'Bekijk deze clip op Wistic')}"><meta property="og:url" content="${esc(page)}">`
     + `<meta property="og:video" content="${esc(vid)}"><meta property="og:video:secure_url" content="${esc(vid)}"><meta property="og:video:type" content="video/mp4"><meta property="og:video:width" content="1280"><meta property="og:video:height" content="720">`
     + (img ? `<meta property="og:image" content="${esc(img)}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="${esc(img)}">` : '<meta name="twitter:card" content="summary">')
-    + `<meta name="theme-color" content="#86ad63">`;
+    + `<meta name="theme-color" content="#0b0c0b">`;
   const meta = [r.game && `<span><b>${esc(r.game)}</b></span>`, r.author && `<span>door <b>${esc(r.author)}</b></span>`, `<span>${esc(fmtDate(r.created))}</span>`, `<span>${r.views} ${r.views === 1 ? 'weergave' : 'weergaven'}</span>`].filter(Boolean).join('');
-  return HEAD(title + ' - Wistic', og) + `<body><div class="glow${img ? '' : ' none'}"${img ? ` style="background-image:url('${esc(img)}')"` : ''}></div><main>${BRAND}
+  return HEAD(title + ' - Wistic', og) + `<body><main>${BRAND}
 <div class="stage"><video src="${esc(vid)}"${img ? ` poster="${esc(img)}"` : ''} controls playsinline preload="metadata"></video></div>
 <div class="info"><div><h1>${esc(title)}</h1><div class="meta">${meta}</div></div>
 <div class="act"><button class="btn pri" id="cp" type="button">Link kopiëren</button><a class="btn" href="${esc(vid)}?dl=1" download>Downloaden</a></div></div>
@@ -213,7 +211,7 @@ function watch(r, base) {
 <script>var b=document.getElementById('cp');b.onclick=function(){var d=function(){b.textContent='Gekopieerd';b.classList.add('ok');setTimeout(function(){b.textContent='Link kopiëren';b.classList.remove('ok')},2000)};try{navigator.clipboard.writeText(location.href).then(d,d)}catch(e){var t=document.createElement('textarea');t.value=location.href;document.body.appendChild(t);t.select();try{document.execCommand('copy')}catch(x){}t.remove();d()}}</script></body></html>`;
 }
 
-const gone = () => HEAD('Clip niet gevonden - Wistic', '<meta name="robots" content="noindex">') + `<body><div class="glow none"></div><main>${BRAND}<div class="gone"><h1>Deze clip is er niet meer</h1><p>De link klopt niet, of de clip is verwijderd. Clips verdwijnen 30 dagen nadat ze voor het laatst zijn bekeken.</p></div></main></body></html>`;
+const gone = () => HEAD('Clip niet gevonden - Wistic', '<meta name="robots" content="noindex">') + `<body><main>${BRAND}<div class="gone"><h1>Deze clip is er niet meer</h1><p>De link klopt niet, of de clip is verwijderd. Clips verdwijnen 30 dagen nadat ze voor het laatst zijn bekeken.</p></div></main></body></html>`;
 
 
 async function page(req, env, ctx, id, base) {
