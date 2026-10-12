@@ -78,7 +78,7 @@ export function homePage(env, assets = { logo: '/logo.png', favicon: '/favicon.p
 <div class="wrap hero"><div>
 <h1>Geen overlay. Alleen clips.</h1>
 <p class="lead">Wistic bewaart op de achtergrond de laatste seconden van je game. Gebeurt er iets goeds? Druk op F8 en de clip staat klaar om te delen.</p>
-<div class="cta">${i.dlBtn}<a class="btn" href="#how-it-works">Zo werkt het</a>${i.dcBtn}</div>
+<div class="cta">${i.dlBtn}<a class="btn" href="#how-it-works">Zo werkt het</a>${i.dcBtn}${i.repoBtn}</div>
 <p class="note">Voor Windows.</p></div>
 <div class="tl">${timeline()}<p>Standaard de laatste 60 seconden. Je kiest zelf een lengte van 10 tot 600 seconden.</p></div></div>
 
@@ -115,6 +115,6 @@ ${table(medal.name, medal.rows)}
 <details><summary>Heb ik een account nodig?</summary><p>Om clips te delen log je in met e-mail of Google. Opnemen en clips bewaren op je eigen pc kan ook als gast.</p></details>
 </div></div></section>
 
-<section class="end"><div class="wrap"><div><h2 class="d">Klaar voor je eerste clip?</h2><div class="cta">${i.dlBtn}${i.dcBtn}<a class="btn" href="/support">Hulp nodig? Open een ticket</a></div></div></div></section>`;
+<section class="end"><div class="wrap"><div><h2 class="d">Klaar voor je eerste clip?</h2><div class="cta">${i.dlBtn}${i.dcBtn}${i.repoBtn}<a class="btn" href="/support">Hulp nodig? Open een ticket</a></div></div></div></section>`;
   return shell(env, { title: 'Wistic: geen overlay, alleen clips', desc, css: CSS, body }, assets);
 }

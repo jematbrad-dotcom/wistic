@@ -32,12 +32,13 @@ footer{padding:30px 0 max(34px,env(safe-area-inset-bottom));color:var(--mu);font
 `;
 
 export function dlInfo(env) {
-  const dl = String(env.DOWNLOAD_URL || '').trim(), dc = String(env.DISCORD_INVITE || '').trim();
-  const dlOk = /^https:\/\//i.test(dl), dcOk = /^https:\/\/(?:discord\.gg|discord\.com\/invite)\/[A-Za-z0-9-]+$/i.test(dc);
+  const dl = String(env.DOWNLOAD_URL || '').trim(), dc = String(env.DISCORD_INVITE || '').trim(), repo = String(env.REPO_URL || '').trim();
+  const dlOk = /^https:\/\//i.test(dl), dcOk = /^https:\/\/(?:discord\.gg|discord\.com\/invite)\/[A-Za-z0-9-]+$/i.test(dc), repoOk = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+$/i.test(repo);
   return {
-    dlOk, dcOk, dc, dl,
+    dlOk, dcOk, repoOk, dc, dl, repo,
     dlBtn: dlOk ? `<a class="btn pri" href="${esc(dl)}">Download voor Windows</a>` : `<span class="btn pri off" aria-disabled="true">Download volgt binnenkort</span>`,
-    dcBtn: dcOk ? `<a class="btn" href="${esc(dc)}" rel="noopener">Join onze Discord</a>` : ''
+    dcBtn: dcOk ? `<a class="btn" href="${esc(dc)}" rel="noopener">Join onze Discord</a>` : '',
+    repoBtn: repoOk ? `<a class="btn" href="${esc(repo)}" rel="noopener">Source code</a>` : ''
   };
 }
 
@@ -50,7 +51,7 @@ export function shell(env, { title, desc, css = '', body }, assets = { favicon: 
 <body>
 <header><div class="wrap"><a class="brand" href="/"><img src="${assets.favicon}" width="36" height="36" alt="">Wistic</a><nav class="top" aria-label="Menu">${i.dcOk ? `<a href="${esc(i.dc)}" rel="noopener">Discord</a>` : ''}<a href="/compare">Vergelijk</a><a href="/support">Support</a>${i.dlOk ? `<a class="nbtn" href="${esc(i.dl)}">Download voor Windows</a>` : ''}</nav></div></header>
 <main>${body}</main>
-<footer><div class="wrap">Wistic. Geen overlay, alleen clips.<span class="sep">·</span><a href="/compare">Vergelijk</a><span class="sep">·</span><a href="/support">Support</a>${i.dcOk ? `<span class="sep">·</span><a href="${esc(i.dc)}" rel="noopener">Discord</a>` : ''}</div></footer>
+<footer><div class="wrap">Wistic. Geen overlay, alleen clips.<span class="sep">·</span><a href="/compare">Vergelijk</a><span class="sep">·</span><a href="/support">Support</a>${i.dcOk ? `<span class="sep">·</span><a href="${esc(i.dc)}" rel="noopener">Discord</a>` : ''}${i.repoOk ? `<span class="sep">·</span><a href="${esc(i.repo)}" rel="noopener">Source code</a>` : ''}</div></footer>
 </body></html>`;
 }
 

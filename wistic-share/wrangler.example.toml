@@ -1,0 +1,36 @@
+name = "wistic"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+workers_dev = true
+
+# Je eigen domein (optioneel).
+routes = [
+  { pattern = "jouwdomein.nl", custom_domain = true },
+  { pattern = "www.jouwdomein.nl", custom_domain = true }
+]
+
+[vars]
+FIREBASE_PROJECT_ID = "JE-FIREBASE-PROJECT-ID"
+# Downloadknop op de homepage
+DOWNLOAD_URL = "https://jouwdomein.nl/updates/Wistic-Setup.exe"
+# Je Discord-uitnodiging
+DISCORD_INVITE = "https://discord.gg/JE-INVITE"
+# Link naar de broncode (Source code-knop op de homepage)
+REPO_URL = "https://github.com/JIJ/JE-REPO"
+# Het e-mailadres van de eigenaar: dit account krijgt het kroontje en kan rollen geven
+OWNER_EMAIL = "jou@jouwdomein.nl"
+# De publieke web-API-key van Firebase (apiKey uit firebase-config.js)
+FIREBASE_API_KEY = "JE-FIREBASE-API-KEY"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "blips-clips"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "blips"
+database_id = "JE-DATABASE-ID"   # npx wrangler d1 create blips
+
+# Elke nacht: clips opruimd die 30 dagen niet bekeken zijn (en oude gesloten tickets)
+[triggers]
+crons = ["17 3 * * *"]
