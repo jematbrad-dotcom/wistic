@@ -104,13 +104,33 @@ details a{color:var(--gr)}
 
 @media(max-width:900px){
   .hero,.showc{grid-template-columns:1fr}
-  .hero{padding-top:24px}
+  .hero{padding-top:20px;gap:26px}
+  .hero h1{max-width:none}
   .facts{grid-template-columns:repeat(2,minmax(0,1fr))}
   .steps,.wins{grid-template-columns:1fr}
   .steps li+li:before{display:none}
   .rows .row{grid-template-columns:1fr;gap:4px}
+  .showc{gap:26px}
 }
-@media(max-width:560px){.facts{grid-template-columns:1fr}.app{grid-template-columns:1fr}.sb{flex-direction:row;flex-wrap:wrap;gap:14px;border-right:0;border-bottom:1px solid var(--bd)}}
+@media(max-width:560px){
+  .facts{gap:10px}
+  .facts li{padding:14px 16px}
+  .cta{gap:8px}
+  .cta .btn{flex:1 1 calc(50% - 4px);text-align:center;padding:12px 12px}
+  .cta .btn.pri{flex:1 1 100%}
+  .app{grid-template-columns:1fr}
+  .sb{flex-direction:row;flex-wrap:wrap;gap:12px;padding:12px;border-right:0;border-bottom:1px solid var(--bd)}
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .steps li{padding:18px}
+  .rows .row{padding:15px 2px}
+  .rec-foot{font-size:13px;padding:12px 14px}
+  .end>div{padding:26px 20px}
+  .band:before{width:100vw}
+}
+@media(max-width:380px){
+  .cta .btn{flex:1 1 100%}
+  .facts{grid-template-columns:1fr}
+}
 `;
 
 export function homePage(env, assets = { logo: '/logo.png', favicon: '/favicon.png' }) {

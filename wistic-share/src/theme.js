@@ -28,6 +28,17 @@ kbd{font:600 .88em system-ui,sans-serif;background:var(--bg);border:1px solid #3
 footer{padding:26px 0 max(30px,env(safe-area-inset-bottom));color:var(--mu);font-size:.9rem;border-top:1px solid var(--bd)}footer a{color:var(--mu)}footer a:hover{color:var(--tx)}.sep{margin:0 8px;opacity:.6}
 @media(max-width:780px){.cr{grid-template-columns:1fr;gap:6px}.cr.ch{display:none}.cr div:before{content:attr(data-l);display:block;font-size:.78rem;font-weight:600;color:var(--mu);margin-top:6px}.top a.nbtn{display:none}}
 @media(max-width:520px){.btn{text-align:center}.cta .btn{flex:1 1 100%}}
+@media(max-width:600px){
+  body{font-size:16px}
+  section{padding:clamp(36px,9vw,56px) 0}
+  h2{margin-bottom:22px}
+  .top{gap:0}
+  .top a{padding:8px 10px;font-size:.88rem}
+  .brand{font-size:1.05rem}
+  .card{padding:20px}
+}
+@media(max-width:380px){.top a{padding:8px 7px;font-size:.83rem}.brand{font-size:.98rem}}
+@media(max-width:430px){.top a.dc{display:none}}
 `;
 
 export function dlInfo(env) {
@@ -48,7 +59,7 @@ export function shell(env, { title, desc, css = '', body }, assets = { favicon: 
 <link rel="icon" type="image/png" href="${assets.favicon}">
 <style>${BASE_CSS}${css}</style></head>
 <body>
-<header><div class="wrap"><a class="brand" href="/"><img src="${assets.favicon}" width="36" height="36" alt="">Wistic</a><nav class="top" aria-label="Menu">${i.dcOk ? `<a href="${esc(i.dc)}" rel="noopener">Discord</a>` : ''}<a href="/compare">Vergelijk</a><a href="/support">Support</a>${i.dlOk ? `<a class="nbtn" href="${esc(i.dl)}">Download voor Windows</a>` : ''}</nav></div></header>
+<header><div class="wrap"><a class="brand" href="/"><img src="${assets.favicon}" width="36" height="36" alt="">Wistic</a><nav class="top" aria-label="Menu">${i.dcOk ? `<a class="dc" href="${esc(i.dc)}" rel="noopener">Discord</a>` : ''}<a href="/compare">Vergelijk</a><a href="/support">Support</a>${i.dlOk ? `<a class="nbtn" href="${esc(i.dl)}">Download voor Windows</a>` : ''}</nav></div></header>
 <main>${body}</main>
 <footer><div class="wrap">Wistic. Geen overlay, alleen clips.<span class="sep">·</span><a href="/compare">Vergelijk</a><span class="sep">·</span><a href="/support">Support</a>${i.dcOk ? `<span class="sep">·</span><a href="${esc(i.dc)}" rel="noopener">Discord</a>` : ''}${i.repoOk ? `<span class="sep">·</span><a href="${esc(i.repo)}" rel="noopener">Source code</a>` : ''}</div></footer>
 </body></html>`;
