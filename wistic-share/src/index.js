@@ -197,9 +197,12 @@ h1{font:800 clamp(1.5rem,4vw,2.3rem)/1.1 system-ui,sans-serif;letter-spacing:-.0
 .btn.ok{background:var(--gr);border-color:var(--gr);color:#04140c}
 .btn:focus-visible,a:focus-visible,video:focus-visible{outline:2px solid #b9d99a;outline-offset:3px}
 footer{margin-top:30px;color:var(--mu);font-size:.85rem;max-width:62ch}
+.pitch{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:22px;padding:16px 18px;background:var(--pn);border:1px solid var(--ac2);border-radius:12px;max-width:720px}
+.pitch b{font-size:1.02rem}
+.pitch .btn{margin-left:auto;white-space:nowrap}
 .gone{max-width:520px;margin:18vh auto 0;text-align:left}
 .gone h1{font-size:clamp(1.7rem,5vw,2.4rem)}.gone p{color:var(--mu);margin:0 0 22px}
-@media (max-width:640px){main{padding-left:14px;padding-right:14px}.stage{border-radius:10px}.act{width:100%}.act .btn{flex:1;text-align:center}}
+@media (max-width:640px){main{padding-left:14px;padding-right:14px}.stage{border-radius:10px}.act{width:100%}.act .btn{flex:1;text-align:center}.pitch{gap:10px}.pitch .btn{margin-left:0;width:100%;text-align:center}}
 `;
 
 const BRAND = `<a class="brand" href="/"><img class="mark" src="/favicon.png" width="84" height="84" alt="Wistic"></a>`;
@@ -220,6 +223,7 @@ function watch(r, base) {
 <div class="stage"><video src="${esc(vid)}"${img ? ` poster="${esc(img)}"` : ''} controls playsinline preload="metadata"></video></div>
 <div class="info"><div><h1>${esc(title)}</h1><div class="meta">${meta}</div></div>
 <div class="act"><button class="btn pri" id="cp" type="button">Link kopiëren</button><a class="btn" href="${esc(vid)}?dl=1" download>Downloaden</a></div></div>
+<div class="pitch"><b>Filmen met één toets?</b> Wistic maakt clips van je game op druk op F8 en zet er meteen een link bij. Gratis voor Windows.<a class="btn pri" href="${esc(base)}">Download Wistic</a></div>
 <footer>Deze clip verdwijnt 30 dagen nadat hij voor het laatst is bekeken.</footer></main>
 <script>var b=document.getElementById('cp');b.onclick=function(){var d=function(){b.textContent='Gekopieerd';b.classList.add('ok');setTimeout(function(){b.textContent='Link kopiëren';b.classList.remove('ok')},2000)};try{navigator.clipboard.writeText(location.href).then(d,d)}catch(e){var t=document.createElement('textarea');t.value=location.href;document.body.appendChild(t);t.select();try{document.execCommand('copy')}catch(x){}t.remove();d()}}</script></body></html>`;
 }

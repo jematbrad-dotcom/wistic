@@ -150,6 +150,9 @@ const PAIRS = [
 
   // ----- clippagina -----
   ['Bekijk deze clip op Wistic', 'Watch this clip on Wistic'],
+  ['<b>Filmen met één toets?</b>', '<b>Record clips with one key?</b>'],
+  ['Wistic maakt clips van je game op druk op F8 en zet er meteen een link bij. Gratis voor Windows.', 'Wistic saves your game when you press F8 and gives you a link to share right away. Free for Windows.'],
+  ['Download Wistic', 'Download Wistic'],
   ['<span>door <b>', '<span>by <b>'],
   ['>Downloaden<', '>Download<'],
   ['Deze clip verdwijnt 30 dagen nadat hij voor het laatst is bekeken.', 'This clip disappears 30 days after it was last viewed.'],
