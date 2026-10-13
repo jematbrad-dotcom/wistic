@@ -1,8 +1,12 @@
 # Wistic
 
+![Wistic](promo/readme-banner.png)
+
 A lightweight clip recorder for Windows. No overlay, no clutter — just clips.
 
 Wistic lives in your system tray. Press **F8** to save the last moments of gameplay, **F7** for a screenshot, and **Alt+F8** to record until you stop. Any clip can become a link that plays right inside Discord.
+
+![How Wistic works](promo/wistic-demo.gif)
 
 *Prototype — work in progress.*
 
