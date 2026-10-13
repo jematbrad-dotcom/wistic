@@ -9,9 +9,11 @@ import { handleSocial, cleanupSocial } from './social.js';
 // Cloudflare Worker + R2 (video's) + D1 (gegevens). Inloggen gaat met het Firebase-account uit de Wistic-app.
 
 const MAX_CLIP = 90 * 1024 * 1024;        // gratis Workers accepteren ongeveer 100 MB per upload
-const MAX_USER_BYTES = 500 * 1024 * 1024; // per gebruiker
-const MAX_USER_CLIPS = 20;                // per gebruiker
+const MAX_USER_BYTES = 1500 * 1024 * 1024; // per gebruiker (1,5 GB)
+const MAX_USER_CLIPS = 40;                // per gebruiker
 const MAX_TOTAL = 9 * 1024 ** 3;          // voor iedereen samen, blijft onder de gratis 10 GB
+const SOFT_TOTAL = 8.4 * 1024 ** 3;       // boven dit niveau ruimt de nachtelijke opruiming extra op
+const SOFT_TARGET = 7 * 1024 ** 3;        // opruimen stopt zodra de opslag onder dit niveau is
 const TTL_DAYS = 30, DAY = 86400000;
 const BOT = /bot|crawler|spider|discord|slack|telegram|whatsapp|facebookexternalhit|preview|embed/i;
 const JWKS_URL = 'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com';
@@ -109,7 +111,7 @@ async function init(req, env) {
   if (size > MAX_CLIP) return err('Deze clip is te groot om te delen (max 90 MB). Snij hem bij.', 413);
   const mine = await env.DB.prepare('SELECT COUNT(*) n, COALESCE(SUM(size),0) s FROM clips WHERE uid=?').bind(me.uid).first();
   if (mine.n >= MAX_USER_CLIPS) return err('Je hebt al ' + MAX_USER_CLIPS + ' gedeelde clips. Verwijder er eerst een.', 403);
-  if (mine.s + size > MAX_USER_BYTES) return err('Je deellimiet (500 MB) is vol. Verwijder eerst een gedeelde clip.', 403);
+  if (mine.s + size > MAX_USER_BYTES) return err('Je deellimiet (1,5 GB) is vol. Verwijder eerst een gedeelde clip.', 403);
   const all = await env.DB.prepare('SELECT COALESCE(SUM(size),0) s FROM clips').first();
   if (all.s + size > MAX_TOTAL) return err('Er is op dit moment geen ruimte meer om te delen. Probeer het later opnieuw.', 507);
   await unTable(env);
@@ -271,9 +273,23 @@ async function updateFile(req, env, name) {
 async function cleanup(env) {
   const now = Date.now();
   const { results } = await env.DB.prepare('SELECT id FROM clips WHERE (ready=1 AND last_viewed<?) OR (ready=0 AND created<?) LIMIT 500').bind(now - TTL_DAYS * DAY, now - DAY).all();
-  if (!results.length) return;
-  await env.BUCKET.delete(results.flatMap(r => ['v/' + r.id + '.mp4', 't/' + r.id + '.jpg']));
-  await env.DB.batch(results.map(r => env.DB.prepare('DELETE FROM clips WHERE id=?').bind(r.id)));
+  const goneIds = results.map(r => r.id);
+  // De gratis R2-opslag zit vol als er te veel oude, ongebekeken clips liggen. Liever een paar
+  // links eerder laten verlopen dan dat delen mislukt: ruim dan de oudst-bekeken clips op.
+  const sum = await env.DB.prepare('SELECT COALESCE(SUM(size),0) s FROM clips WHERE ready=1').first();
+  let used = Math.max(0, +(sum && sum.s) || 0);
+  if (used > SOFT_TOTAL) {
+    let need = used - SOFT_TARGET;
+    const old = await env.DB.prepare('SELECT id,size FROM clips WHERE ready=1 ORDER BY last_viewed ASC LIMIT 300').all();
+    for (const r of old.results) {
+      if (need <= 0) break;
+      goneIds.push(r.id); need -= (+r.size || 0); used -= (+r.size || 0);
+    }
+  }
+  const ids = [...new Set(goneIds)];
+  if (!ids.length) return;
+  await env.BUCKET.delete(ids.flatMap(id => ['v/' + id + '.mp4', 't/' + id + '.jpg']));
+  await env.DB.batch(ids.map(id => env.DB.prepare('DELETE FROM clips WHERE id=?').bind(id)));
 }
 
 const worker = {

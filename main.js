@@ -860,12 +860,23 @@ async function shareClip(n) {
   try {
     toastShow({ state: 'saving', title: 'Link maken…', sub: g + ' · klaarmaken', pct: 0.02 });
     const total = await mediaDur(src);
-    // Kleiner maken (max 1080p, ongeveer 6 Mbit/s) zodat er meer clips in de gratis opslag passen.
-    const okc = await encode(['-y', '-i', src, '-vf', 'scale=-2:min(1080\\,ih)', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '26', '-maxrate', '6M', '-bufsize', '12M',
-      '-r', '30', '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', '-f', 'mp4', tmp], total, p => toastShow({ pct: p * 0.6 }), 120000 + total * 8000);
-    if (!okc || !fs.existsSync(tmp)) throw new Error('Klaarmaken voor delen mislukt.');
-    let file = tmp, size = fs.statSync(tmp).size; const osz = fs.statSync(src).size;
-    if (osz < size && osz <= SHARE_MAX) { file = src; size = osz; }   // het origineel is al kleiner
+    // Zelfinkstellende kwaliteit: eerst 1080p. Pas als de clip te groot wordt voor de gratis opslag
+    // gaat hij een stap omlaag (720p, dan 540p). Korte clips houden dus hun volle scherpte,
+    // lange clips worden automatisch kleiner in plaats van geweigerd.
+    const TARGET = 40 * 1024 * 1024;
+    const LADDER = [['1080', '26', '5M', '12M', '112k'], ['720', '27', '3M', '6M', '96k'], ['540', '28', '1.8M', '4M', '80k']];
+    const osz = fs.statSync(src).size;
+    let file = '', size = 0;
+    for (let i = 0; i < LADDER.length; i++) {
+      const q = LADDER[i];
+      const ok = await encode(['-y', '-i', src, '-vf', 'scale=-2:min(' + q[0] + '\\,ih)', '-c:v', 'libx264', '-preset', 'veryfast',
+        '-crf', q[1], '-maxrate', q[2], '-bufsize', q[3], '-r', '30', '-c:a', 'aac', '-b:a', q[4],
+        '-movflags', '+faststart', '-f', 'mp4', tmp], total, p => toastShow({ pct: (i + p) / LADDER.length * 0.6 }), 120000 + total * 8000);
+      if (ok && fs.existsSync(tmp)) { file = tmp; size = fs.statSync(tmp).size; }
+      if (size && size <= TARGET) break;   // klein genoeg: kwaliteit blijft zo hoog mogelijk
+    }
+    if (!file) throw new Error('Klaarmaken voor delen mislukt.');
+    if (osz < size && osz <= TARGET) { file = src; size = osz; }   // het origineel is al kleiner
     if (size > SHARE_MAX) throw new Error('Deze clip is te groot om te delen (max 90 MB). Snij hem bij.');
     toastShow({ sub: g + ' · uploaden', pct: 0.65 });
     const { id } = await shareApi('POST', '/api/clips', JSON.stringify({ title: meta.title || '', game: g, size }), { 'Content-Type': 'application/json' });
