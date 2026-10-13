@@ -4,6 +4,7 @@ import { LOGO_B64, LOGO_W, LOGO_H, FAVICON_B64 } from './logo.js';
 import { handleSupport, cleanupSupport } from './support.js';
 import { localize } from './localize.js';
 import { handleSocial, cleanupSocial } from './social.js';
+import { b2On, b2GetUrl, b2Put, b2Delete } from './b2.js';
 
 // Wistic Share: clips delen via een link.
 // Cloudflare Worker + R2 (video's) + D1 (gegevens). Inloggen gaat met het Firebase-account uit de Wistic-app.
@@ -11,9 +12,11 @@ import { handleSocial, cleanupSocial } from './social.js';
 const MAX_CLIP = 90 * 1024 * 1024;        // gratis Workers accepteren ongeveer 100 MB per upload
 const MAX_USER_BYTES = 1500 * 1024 * 1024; // per gebruiker (1,5 GB)
 const MAX_USER_CLIPS = 40;                // per gebruiker
-const MAX_TOTAL = 9 * 1024 ** 3;          // voor iedereen samen, blijft onder de gratis 10 GB
-const SOFT_TOTAL = 8.4 * 1024 ** 3;       // boven dit niveau ruimt de nachtelijke opruiming extra op
-const SOFT_TARGET = 7 * 1024 ** 3;        // opruimen stopt zodra de opslag onder dit niveau is
+const R2_KEEP = 6 * 1024 ** 3;           // hoeveel er op R2 blijft staan (verse clips, snel)
+const B2_KEEP = 8.5 * 1024 ** 3;         // B2 heeft 10 GB gratis; blijf daar ruim onder
+const MAX_TOTAL = 13 * 1024 ** 3;        // samen R2_KEEP + B2_KEEP, dus 20 GB gratis in totaal
+const SOFT_TOTAL = 12.5 * 1024 ** 3;     // boven dit niveau ruimt de nachtelijke opruiming extra op
+const SOFT_TARGET = 11 * 1024 ** 3;      // opruimen stopt zodra de opslag onder dit niveau is
 const TTL_DAYS = 30, DAY = 86400000;
 const BOT = /bot|crawler|spider|discord|slack|telegram|whatsapp|facebookexternalhit|preview|embed/i;
 const JWKS_URL = 'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com';
@@ -58,6 +61,13 @@ async function unTable(env) {
   if (unReady) return;
   await env.DB.prepare('CREATE TABLE IF NOT EXISTS usernames (uid TEXT PRIMARY KEY, name TEXT NOT NULL, nk TEXT NOT NULL UNIQUE, changed INTEGER NOT NULL DEFAULT 0)').run();
   unReady = true;
+}
+// Waar staat een clip: 'r2' (verse clips) of 'b2' (oudere, naar Backblaze verplaatst).
+let storeReady = false;
+async function storeCol(env) {
+  if (storeReady) return;
+  try { await env.DB.prepare("ALTER TABLE clips ADD COLUMN store TEXT NOT NULL DEFAULT 'r2'").run(); } catch (e) { }
+  storeReady = true;
 }
 // Alleen dezelfde naam is bezet. Hoofdletters tellen niet mee: "JanWillem" en "janwillem" zijn dezelfde naam, "Jan Willem" niet.
 const nameKey = n => n.toLowerCase();
@@ -114,11 +124,11 @@ async function init(req, env) {
   if (mine.s + size > MAX_USER_BYTES) return err('Je deellimiet (1,5 GB) is vol. Verwijder eerst een gedeelde clip.', 403);
   const all = await env.DB.prepare('SELECT COALESCE(SUM(size),0) s FROM clips').first();
   if (all.s + size > MAX_TOTAL) return err('Er is op dit moment geen ruimte meer om te delen. Probeer het later opnieuw.', 507);
-  await unTable(env);
+  await unTable(env); await storeCol(env);
   const un = await env.DB.prepare('SELECT name FROM usernames WHERE uid=?').bind(me.uid).first();
   const id = rid(), now = Date.now();
-  await env.DB.prepare('INSERT INTO clips (id,uid,author,title,game,size,created,last_viewed) VALUES (?,?,?,?,?,?,?,?)')
-    .bind(id, me.uid, (un && un.name) || me.name || 'Wistic', clean(b.title, 60), clean(b.game, 40), size, now, now).run();
+  await env.DB.prepare('INSERT INTO clips (id,uid,author,title,game,size,created,last_viewed,store) VALUES (?,?,?,?,?,?,?,?,?)')
+    .bind(id, me.uid, (un && un.name) || me.name || 'Wistic', clean(b.title, 60), clean(b.game, 40), size, now, now, 'r2').run();
   return json({ id });
 }
 
@@ -151,6 +161,7 @@ async function del(req, env, id) {
   const row = await env.DB.prepare('SELECT id FROM clips WHERE id=? AND uid=?').bind(id, me.uid).first();
   if (!row) return err('Clip niet gevonden.', 404);
   await env.BUCKET.delete(['v/' + id + '.mp4', 't/' + id + '.jpg']);
+  if (b2On(env)) { try { await b2Delete(env, 'v/' + id + '.mp4'); await b2Delete(env, 't/' + id + '.jpg'); } catch (e) { } }
   await env.DB.prepare('DELETE FROM clips WHERE id=?').bind(id).run();
   return json({ ok: true });
 }
@@ -224,9 +235,19 @@ async function page(req, env, ctx, id, base) {
 }
 
 async function video(req, env, ctx, id, dl) {
-  const r = await env.DB.prepare('SELECT ready FROM clips WHERE id=?').bind(id).first();
+  await storeCol(env);
+  const r = await env.DB.prepare('SELECT ready,store FROM clips WHERE id=?').bind(id).first();
   if (!r || !r.ready) return new Response('Niet gevonden', { status: 404 });
   const range = req.headers.get('range');
+  // Staat de clip op B2, dan sturen we een korte download-link door: de video streamt dan
+  // rechtstreeks vanaf B2 en gaat er geen enkele byte door de Worker.
+  if (r.store === 'b2' && b2On(env)) {
+    const u = await b2GetUrl(env, 'v/' + id + '.mp4', 3600, dl ? 'attachment; filename="wistic-' + id + '.mp4"' : '');
+    if (u) {
+      if (!BOT.test(req.headers.get('user-agent') || '') && (!range || /^bytes=0-/.test(range))) ctx.waitUntil(touch(env, id, false));
+      return new Response(null, { status: 302, headers: { location: u, 'cache-control': 'no-store', 'access-control-allow-origin': '*' } });
+    }
+  }
   const o = await env.BUCKET.get('v/' + id + '.mp4', range ? { range: req.headers } : undefined);
   if (!o) return new Response('Niet gevonden', { status: 404 });
   const h = new Headers({ 'content-type': 'video/mp4', 'accept-ranges': 'bytes', 'cache-control': 'public, max-age=3600', etag: o.httpEtag, 'access-control-allow-origin': '*' });
@@ -246,6 +267,12 @@ const bin = b => Uint8Array.from(atob(b), c => c.charCodeAt(0));
 const PNG = { '/logo.png': bin(LOGO_B64), '/favicon.png': bin(FAVICON_B64) };
 
 async function thumb(env, id) {
+  let store = 'r2';
+  try { const r = await env.DB.prepare('SELECT store FROM clips WHERE id=?').bind(id).first(); store = (r && r.store) || 'r2'; } catch (e) { }
+  if (store === 'b2' && b2On(env)) {
+    const u = await b2GetUrl(env, 't/' + id + '.jpg', 3600);
+    if (u) return new Response(null, { status: 302, headers: { location: u, 'cache-control': 'public, max-age=600' } });
+  }
   const o = await env.BUCKET.get('t/' + id + '.jpg');
   if (!o) return new Response('Niet gevonden', { status: 404 });
   return new Response(o.body, { headers: { 'content-type': 'image/jpeg', 'cache-control': 'public, max-age=86400', 'access-control-allow-origin': '*' } });
@@ -271,25 +298,58 @@ async function updateFile(req, env, name) {
 
 // ---------- Nachtelijke opruiming ----------
 async function cleanup(env) {
+  await storeCol(env);
   const now = Date.now();
-  const { results } = await env.DB.prepare('SELECT id FROM clips WHERE (ready=1 AND last_viewed<?) OR (ready=0 AND created<?) LIMIT 500').bind(now - TTL_DAYS * DAY, now - DAY).all();
-  const goneIds = results.map(r => r.id);
-  // De gratis R2-opslag zit vol als er te veel oude, ongebekeken clips liggen. Liever een paar
-  // links eerder laten verlopen dan dat delen mislukt: ruim dan de oudst-bekeken clips op.
+  const { results } = await env.DB.prepare('SELECT id,store FROM clips WHERE (ready=1 AND last_viewed<?) OR (ready=0 AND created<?) LIMIT 500').bind(now - TTL_DAYS * DAY, now - DAY).all();
+  const dead = results.slice();
+  // De opslag zit vol als er te veel oude, ongebekeken clips liggen. Liever een paar links eerder
+  // laten verlopen dan dat delen mislukt: ruim dan de oudst-bekeken clips op.
   const sum = await env.DB.prepare('SELECT COALESCE(SUM(size),0) s FROM clips WHERE ready=1').first();
   let used = Math.max(0, +(sum && sum.s) || 0);
   if (used > SOFT_TOTAL) {
     let need = used - SOFT_TARGET;
-    const old = await env.DB.prepare('SELECT id,size FROM clips WHERE ready=1 ORDER BY last_viewed ASC LIMIT 300').all();
+    const old = await env.DB.prepare('SELECT id,store,size FROM clips WHERE ready=1 ORDER BY last_viewed ASC LIMIT 300').all();
     for (const r of old.results) {
       if (need <= 0) break;
-      goneIds.push(r.id); need -= (+r.size || 0); used -= (+r.size || 0);
+      dead.push(r); need -= (+r.size || 0); used -= (+r.size || 0);
     }
   }
-  const ids = [...new Set(goneIds)];
+  const ids = [...new Set(dead.map(r => r.id))];
   if (!ids.length) return;
-  await env.BUCKET.delete(ids.flatMap(id => ['v/' + id + '.mp4', 't/' + id + '.jpg']));
+  const r2 = ids.filter(id => { const r = dead.find(d => d.id === id); return !r || r.store !== 'b2'; });
+  if (r2.length) await env.BUCKET.delete(r2.flatMap(id => ['v/' + id + '.mp4', 't/' + id + '.jpg']));
+  if (b2On(env)) for (const id of ids) { try { await b2Delete(env, 'v/' + id + '.mp4'); await b2Delete(env, 't/' + id + '.jpg'); } catch (e) { } }
   await env.DB.batch(ids.map(id => env.DB.prepare('DELETE FROM clips WHERE id=?').bind(id)));
+}
+
+// ---------- Oude clips van R2 naar B2 verplaatsen ----------
+// R2 blijft de snelle laag voor verse clips; zodra daar meer dan R2_KEEP staat, schuift het
+// oudste materiaal 's nachts naar B2. Zo is er 20 GB in plaats van 10 GB.
+async function migrate(env) {
+  if (!b2On(env)) return;
+  await storeCol(env);
+  const used = await env.DB.prepare("SELECT COALESCE(SUM(CASE WHEN store='b2' THEN size ELSE 0 END),0) b2, COALESCE(SUM(CASE WHEN store='b2' THEN 0 ELSE size END),0) r2 FROM clips WHERE ready=1").first();
+  if (!used) return;
+  const r2 = +(used.r2 || 0), b2 = +(used.b2 || 0);
+  if (r2 <= R2_KEEP || b2 >= B2_KEEP) return;
+  const rows = await env.DB.prepare("SELECT id,size FROM clips WHERE ready=1 AND store<>'b2' ORDER BY last_viewed ASC LIMIT 12").all();
+  let moved = 0;
+  for (const row of rows.results || []) {
+    if (moved >= 400 * 1024 * 1024 || b2 + (+row.size || 0) > B2_KEEP) break;
+    const v = await env.BUCKET.get('v/' + row.id + '.mp4');
+    if (!v) { await env.DB.prepare("UPDATE clips SET store='b2' WHERE id=?").bind(row.id).run(); continue; }
+    const t = await env.BUCKET.get('t/' + row.id + '.jpg');
+    if (!t) break;   // zonder voorbeeldplaatje migreren we niet: video en plaatje horen bij elkaar
+    let r = await b2Put(env, 'v/' + row.id + '.mp4', v.body, 'video/mp4');
+    if (r && r.ok) {
+      const tr = await b2Put(env, 't/' + row.id + '.jpg', t.body, 'image/jpeg');
+      if (!tr || !tr.ok) r = null;
+    }
+    if (!r || !r.ok) break;   // B2 weigert: niet steeds opnieuw proberen in dezelfde nacht
+    await env.BUCKET.delete(['v/' + row.id + '.mp4', 't/' + row.id + '.jpg']);
+    await env.DB.prepare("UPDATE clips SET store='b2' WHERE id=? AND store<>'b2'").bind(row.id).run();
+    moved += (+row.size || 0);
+  }
 }
 
 const worker = {
@@ -317,7 +377,7 @@ const worker = {
       return html(gone(), 404);
     } catch (e) { return err('Er ging iets mis op de server.', 500); }
   },
-  async scheduled(ev, env, ctx) { ctx.waitUntil(Promise.all([cleanup(env), cleanupSupport(env), cleanupSocial(env)])); }
+  async scheduled(ev, env, ctx) { ctx.waitUntil(Promise.all([cleanup(env), migrate(env), cleanupSupport(env), cleanupSocial(env)])); }
 };
 
 // Taalkeuze: ?lang=nl of ?lang=en onthoudt de keuze in een cookie. Anders bepaalt de taal van de browser (zie i18n.js).
