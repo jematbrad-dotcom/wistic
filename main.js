@@ -509,7 +509,13 @@ async function saveClip() {
     return;
   }
   let liveSec = 0;
-  if (live) { try { liveSec = Math.max(0, Math.min(SEG, (T0 - fs.statSync(path.join(BUF, live)).birthtimeMs) / 1000 - 0.15)); } catch (e) {} if (liveSec < 0.5) live = ''; }
+  // Het beeld komt van gdigrab en is meteen goed, maar het geluid loopt via de mixer
+  // altijd een stuk achter. Lees je het lopende bestand meteen, dan ontbreekt de laatste
+  // seconde geluid. Daarom even wachten tot het geluid binnen is, en de clip daarvoor
+  // iets langer maken. In te stellen met audioTail in settings.json (0 = uit).
+  const tail = live ? Math.max(0, Math.min(4000, Number(S.audioTail) || 1000)) : 0;
+  if (tail) { try { toastShow({ state: 'saving', title: 'Clip opslaan…', sub: 'laatste seconde geluid', pct: 0.02 }); await new Promise(r => setTimeout(r, tail)); } catch (e) {} }
+  if (live) { try { liveSec = Math.min(SEG - 0.05, Math.max(0, (T0 - fs.statSync(path.join(BUF, live)).birthtimeMs) / 1000 - 0.15) + tail); } catch (e) {} if (liveSec < 0.5) live = ''; }
   const pick = f.slice(-Math.max(1, Math.ceil((secs() - liveSec) / SEG)));
   if (!pick.length) return;
   // Pieptonen die eerder klonken (vorige clip, start van een opname) zitten nog in het geluid: die zetten we stil.
