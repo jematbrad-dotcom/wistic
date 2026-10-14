@@ -106,10 +106,8 @@ body{background:#000}
 #col header{height:64px;flex:none;display:flex;align-items:center;gap:12px;padding:0 0 0 22px;background:none;justify-content:flex-start;-webkit-app-region:drag}
 .chip{display:flex;align-items:center;gap:9px;padding:8px 16px;border-radius:24px;border:1px solid var(--bd);background:#0b0b0b;font-size:.8rem;font-weight:700;letter-spacing:.4px;color:#bdbdbd;-webkit-app-region:no-drag;white-space:nowrap}
 .chip.g{border-color:#5d5d5d;color:#555555;background:#181818}
- .pv{display:flex;align-items:center;gap:10px;padding:5px 14px 5px 5px;border-radius:12px;border:1px solid var(--bd);background:#0b0b0b;height:48px;-webkit-app-region:no-drag;max-width:330px}
- .pv .pvt{width:64px;height:36px;border-radius:7px;overflow:hidden;background:#151515;flex:none;border:1px solid #242424}
- .pv img{width:100%;height:100%;object-fit:cover;display:block;opacity:.85}
- .pv .pvx{min-width:0;display:flex;flex-direction:column;gap:2px;line-height:1.25}
+ .pv{display:flex;align-items:center;gap:9px;padding:0 14px;border-radius:12px;border:1px solid var(--bd);background:#0b0b0b;height:44px;-webkit-app-region:no-drag;max-width:280px}
+ .pv .pvx{min-width:0;display:flex;flex-direction:column;gap:1px;line-height:1.3}
  .pv b{font-size:.78rem;color:#e1e1e1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
  .pv span{font-size:.68rem;color:#6f6f6f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
  .pv .pvr{width:7px;height:7px;border-radius:50%;background:#3a3a3a;flex:none;margin-left:2px}
@@ -426,7 +424,7 @@ $('#app').innerHTML=`<aside id=sn><div class=brand>${LOGO}</div>`
  +nav('set','Instellingen',IC.gear)
  +`<div class=lgs id=lgs></div>`
  +`<div class=pr><b>Opslag</b><p id=stx>…</p><div class=bar><i id=stb style="width:0"></i></div><p></p><button class=btn id=stg>Beheer opslag</button></div></aside>`
- +`<div id=col><header><div class=chip id=gp></div><div class=chip id=kc title="Clip nu opslaan"></div><div class=pv id=pv><div class=pvt><img id=pvi alt=""></div><div class=pvx><b id=pvn></b><span id=pvm></span></div><i class=pvr></i></div><div class=chip id=lr title="Opname starten / stoppen"></div><div class=sp></div><div class=hr><button id=snd title="Test geluid">${IC.vol}</button><button id=pf title="Prestaties">${IC.wave}</button><div class=av id=av title="Profiel / instellingen"></div><div class=wc><button data-w=min>–</button><button data-w=max>▢</button><button data-w=close>✕</button></div></div></header><div id=wrap><main id=mn></main><section id=rp></section></div></div><div id=toast></div>`;
+ +`<div id=col><header><div class=chip id=gp></div><div class=chip id=kc title="Clip nu opslaan"></div><div class=pv id=pv><div class=pvx><b id=pvn></b><span id=pvm></span></div><i class=pvr></i></div><div class=chip id=lr title="Opname starten / stoppen"></div><div class=sp></div><div class=hr><button id=snd title="Test geluid">${IC.vol}</button><button id=pf title="Prestaties">${IC.wave}</button><div class=av id=av title="Profiel / instellingen"></div><div class=wc><button data-w=min>–</button><button data-w=max>▢</button><button data-w=close>✕</button></div></div></header><div id=wrap><main id=mn></main><section id=rp></section></div></div><div id=toast></div>`;
 $('#av').onclick=$('#stg').onclick=()=>go('set');
  $('#pv').title=TR('Wat wordt opgenomen');
 $('#kc').onclick=()=>api('clip:save');
@@ -813,21 +811,16 @@ async function pill(){const d=await api('detector'),p=$('#gp');if(!p)return;
  p.className='chip'+(d.rec?' g':'');p.innerHTML=`${IC.wave}<span>${d.seconds}s BUFFER</span>`;
  const k=$('#kc'),sk=kn(S&&S.keys?S.keys.save:'F8');if(k)k.innerHTML=`<kbd>${esc(sk)}</kbd><span>Clip opslaan</span>`;
  const h=$('#hstat');if(h)h.innerHTML=`<i class=dotg style="${d.rec?'':'background:#ffb020;box-shadow:none'}"></i><span>${d.current?'Opnemen: '+esc(d.current):d.rec?'Opname klaar':'Wachten op game…'}</span><kbd>${esc(sk)}</kbd><span>Clip opslaan</span>`}
-// Elke anderhalve seconde één klein schermbeeld: zo zie je precies wat er op dat moment opgenomen zou worden.
-let pvT=0,pvBusy=false;
-async function pvShot(){
- const v=$('#pv'),im=$('#pvi');if(!v||pvBusy||document.hidden||recSv)return;
- pvBusy=true;pvT=Date.now();
- let d=null;try{d=await api('preview:shot')}catch(e){}
- pvBusy=false;if(!d||!$('#pv'))return;
- im.src='data:image/jpeg;base64,'+d.img;
- $('#pvn').textContent=d.naam||'';
- $('#pvm').textContent=d.res||'';
+// Naam van de game en de grootte van het beeld: dat is wat er op dat moment opgenomen wordt.
+async function pvPaint(){
+ const v=$('#pv');if(!v||document.hidden)return;
+ let d=null;try{d=await api('detector')}catch(e){}
+ if(!d||!$('#pv'))return;
+ $('#pvn').textContent=d.current||'';
+ $('#pvm').textContent=d.res?(d.res+' · '+d.fps+' fps'):'';
  v.classList.toggle('on',!!d.rec);
- setTimeout(pvShot,1500);
 }
-setInterval(()=>{if($('#pv')&&Date.now()-pvT>4000)pvShot()},2500);
-setTimeout(pvShot,1200);
+setInterval(pvPaint,2000);setTimeout(pvPaint,800);
 async function det(){if(!$('#det'))return;
  $('#det').innerHTML=`<h4>Game-detectie</h4>${tg('mode','Auto-detect games',S.mode==='game')}${tg('detectAny','Detect any game (recommended)',S.detectAny!==false)}${tg('startup','Start Wistic with Windows',S.startup)}<p>${TR('Bekende games krijgen eigen instellingen. Met <b>Elke game herkennen</b> pakt Wistic ook alle andere games automatisch op.')}</p>`;
  document.querySelectorAll('[data-tg]').forEach(s=>s.onclick=async()=>{const on=!s.classList.contains('on');
