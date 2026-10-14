@@ -295,6 +295,8 @@ async function startBuffer2() {
   }
 
   a.push(
+    // Altijd 1920x1080 of kleiner: evenredig verkleind, nooit vergroot.
+    '-vf', (() => { const m = opnameMaat(); return `scale=${m.w}:${m.h}`; })(),
     '-c:v', e, ...q,
     '-b:v', (S.bitrate || 12) + 'M',
     '-maxrate', (S.bitrate || 12) + 'M',
@@ -807,15 +809,24 @@ function region() {
   const r = screen.dipToScreenRect(null, d.bounds), ev = n => n - (n % 2);
   return ['-offset_x', String(r.x), '-offset_y', String(r.y), '-video_size', `${ev(r.width)}x${ev(r.height)}`];
 }
-// Grootte van het beeld dat opgenomen wordt: precies wat region() aan ffmpeg geeft.
-function opnameRes() {
+// Grootte van het scherm waarvan wordt opgenomen (alle schermen bij elkaar, of de gekozen).
+function schermMaat() {
   const rs = S.display === 'all'
     ? screen.getAllDisplays().map(d => screen.dipToScreenRect(null, d.bounds))
     : [screen.dipToScreenRect(null, (screen.getAllDisplays().find(x => String(x.id) === String(S.display)) || screen.getPrimaryDisplay()).bounds)];
   const x0 = Math.min(...rs.map(r => r.x)), y0 = Math.min(...rs.map(r => r.y));
   const x1 = Math.max(...rs.map(r => r.x + r.width)), y1 = Math.max(...rs.map(r => r.y + r.height));
-  return `${x1 - x0}×${y1 - y0}`;
+  return { w: x1 - x0, h: y1 - y0 };
 }
+// Grootte van het beeld dat opgenomen wordt. Standaard 1080, maar nooit groter dan het scherm:
+// op een 1080p-scherm is er dus geen 1440p-keuze, en 1440p op een 1440p-scherm blijft 1440p.
+function opnameMaat() {
+  const s = schermMaat();
+  const h = S.res === 'full' ? s.h : Math.min(Math.max(Number(S.res) || 1080, 240), s.h);
+  const f = h / s.h;
+  return { w: Math.max(2, Math.round(s.w * f / 2) * 2), h: Math.max(2, Math.round(h / 2) * 2) };
+}
+const opnameRes = () => { const m = opnameMaat(); return `${m.w}×${m.h}`; };
 function openWin() {
   if (win) return win.focus();
   const wa0 = screen.getPrimaryDisplay().workAreaSize;
@@ -1257,14 +1268,22 @@ const H = {
   },
   'display:list': () => {
     const p = screen.getPrimaryDisplay().id;
-    return screen.getAllDisplays().map((d, i) => {
+    const lijst = screen.getAllDisplays().map((d, i) => {
       const r = screen.dipToScreenRect(null, d.bounds);
       // Echte monitornaam van Windows; bij een generieke of lege naam terugvallen op "Screen N".
       const raw = String(d.label || '').trim();
       const generic = !raw || /^(generic|standaard|default|display\s*\d*$)/i.test(raw) || /pnp/i.test(raw);
       const name = generic ? `Screen ${i + 1}` : raw;
-      return { id: String(d.id), label: `${name} — ${r.width}×${r.height}${d.id === p ? ' (primary)' : ''}`, primary: d.id === p };
+      return { id: String(d.id), label: `${name} — ${r.width}×${r.height}${d.id === p ? ' (primary)' : ''}`, primary: d.id === p, w: r.width, h: r.height };
     });
+    // Alle schermen bij elkaar: ook die maat hebben we nodig voor de resolutie-keuze.
+    if (S.display === 'all') {
+      const rs = screen.getAllDisplays().map(d => screen.dipToScreenRect(null, d.bounds));
+      const x0 = Math.min(...rs.map(r => r.x)), y0 = Math.min(...rs.map(r => r.y));
+      const w = Math.max(...rs.map(r => r.x + r.width)) - x0, h = Math.max(...rs.map(r => r.y + r.height)) - y0;
+      lijst.push({ id: 'all', label: 'All screens (whole desktop)', primary: false, w, h });
+    }
+    return lijst;
   },
   detector: () => ({ running: [...running], current: game, rec: !!proc, seconds: secs(), res: opnameRes(), fps: Math.max(15, Math.min(Number(S.fps) || 30, 60)), lrec: lrec ? { t0: lrec.t0, game: lrec.game, saving: !!lrec.stopping } : null }),
   'rec:toggle': async () => { await toggleLong(); return { on: !!lrec }; },
