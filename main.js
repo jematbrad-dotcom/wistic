@@ -252,7 +252,9 @@ async function startBuffer2() {
     '-f', 'gdigrab',
     '-framerate', fps,
     '-draw_mouse', '1',
-    '-thread_queue_size', '512',
+    // Kleine wachtrij: bij 60 beelden per seconde loopt de ruwe video anders meters vooruit in het geheugen
+    // als de encoder even langzaam is. Liever een beeld later dan een gigabyte extra werkgeheugen.
+    '-thread_queue_size', '24',
     ...region(),
     '-i', 'desktop'
   ];
@@ -320,6 +322,7 @@ async function startBuffer2() {
     '-segment_time', String(SEG),
     '-segment_format', 'mpegts',
     '-reset_timestamps', '1',
+    '-max_muxing_queue_size', '24',
     '-segment_start_number', String(startNum),
     path.join(BUF, 's_%06d.ts')
   );
