@@ -226,7 +226,7 @@ async function startBuffer() {
 async function startBuffer2() {
   if (proc) return;
   const e = await encoder();
-  const fpsNum = Math.min(Number(S.fps) || 30, 30);
+  const fpsNum = Math.max(15, Math.min(Number(S.fps) || 30, 60));
   const fps = String(fpsNum);
   let startNum = 0;   // tijdens een lange opname de bestaande segmenten bewaren en gewoon doortellen
   if (lrec) { try { const nn = fs.readdirSync(BUF).map(x => /^s_(\d+)\.ts$/.exec(x)).filter(Boolean).map(m => +m[1]); startNum = nn.length ? Math.max(...nn) + 1 : 0; } catch (e) {} }
@@ -563,7 +563,7 @@ async function saveClip() {
     const run = (withLive, withMute) => encode([
       '-y', '-fflags', '+genpts', '-f', 'concat', '-safe', '0', '-i', list,
       '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-c:a', 'aac', '-b:a', '128k', ...(withMute && mute ? ['-af', mute] : []),
-      '-r', String(Math.min(Number(S.fps) || 30, 30)), '-vsync', 'cfr', '-movflags', '+faststart', '-avoid_negative_ts', 'make_zero',
+      '-r', String(Math.max(15, Math.min(Number(S.fps) || 30, 60))), '-vsync', 'cfr', '-movflags', '+faststart', '-avoid_negative_ts', 'make_zero',
       ...(withLive && live ? ['-t', total.toFixed(2)] : []),
       '-f', 'mp4', part
     ], total, prog, Math.min(900000, 120000 + total * 3000));
@@ -1263,7 +1263,7 @@ const H = {
       return { id: String(d.id), label: `${name} — ${r.width}×${r.height}${d.id === p ? ' (primary)' : ''}`, primary: d.id === p };
     });
   },
-  detector: () => ({ running: [...running], current: game, rec: !!proc, seconds: secs(), res: opnameRes(), fps: Math.min(Number(S.fps) || 30, 30), lrec: lrec ? { t0: lrec.t0, game: lrec.game, saving: !!lrec.stopping } : null }),
+  detector: () => ({ running: [...running], current: game, rec: !!proc, seconds: secs(), res: opnameRes(), fps: Math.max(15, Math.min(Number(S.fps) || 30, 60)), lrec: lrec ? { t0: lrec.t0, game: lrec.game, saving: !!lrec.stopping } : null }),
   'rec:toggle': async () => { await toggleLong(); return { on: !!lrec }; },
   win: (a, e) => { const w = BrowserWindow.fromWebContents(e.sender); if (a === 'min') w.minimize(); else if (a === 'max') w.isMaximized() ? w.unmaximize() : w.maximize(); else w.close(); return true; },
   // Prestaties: RAM = "privé werkgeheugen" (zoals Taakbeheer, zonder gedeelde pagina's dubbel te tellen),
