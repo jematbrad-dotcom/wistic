@@ -1,4 +1,4 @@
-const { screen, app, BrowserWindow, Tray, Menu, globalShortcut, ipcMain, shell, dialog, nativeImage, clipboard, Notification } = require('electron');
+const { screen, app, BrowserWindow, Tray, Menu, globalShortcut, ipcMain, shell, dialog, nativeImage, clipboard, Notification, desktopCapturer } = require('electron');
 const path = require('path'), fs = require('fs'), os = require('os'), { pathToFileURL } = require('url');
 const { spawn, execFile } = require('child_process');
 const crypto = require('crypto');
@@ -1256,6 +1256,23 @@ const H = {
   },
   detector: () => ({ running: [...running], current: game, rec: !!proc, seconds: secs(), lrec: lrec ? { t0: lrec.t0, game: lrec.game, saving: !!lrec.stopping } : null }),
   'rec:toggle': async () => { await toggleLong(); return { on: !!lrec }; },
+  // Klein voorbeeld van wat er op dat moment opgenomen zou worden. Puur ter waarneming:
+  // één schermbeeld per anderhalve seconde, klein genoeg om niets te kosten.
+  'preview:shot': async () => {
+    try {
+      const ds = screen.getAllDisplays();
+      const d = S.display === 'all' ? screen.getPrimaryDisplay() : (ds.find(x => String(x.id) === String(S.display)) || screen.getPrimaryDisplay());
+      const b = screen.dipToScreenRect(null, d.bounds);
+      const tw = 240, th = Math.max(1, Math.round(b.height * tw / b.width));
+      const srcs = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: tw, height: th } });
+      const s = srcs.find(x => String(x.display_id) === String(d.id)) || srcs[0];
+      if (!s || s.thumbnail.isEmpty()) return false;
+      return {
+        img: s.thumbnail.toJPEG(72).toString('base64'),
+        naam: game || '', res: `${b.width}×${b.height}`, rec: !!proc
+      };
+    } catch (e) { return false; }
+  },
   win: (a, e) => { const w = BrowserWindow.fromWebContents(e.sender); if (a === 'min') w.minimize(); else if (a === 'max') w.isMaximized() ? w.unmaximize() : w.maximize(); else w.close(); return true; },
   // Prestaties: RAM = "privé werkgeheugen" (zoals Taakbeheer, zonder gedeelde pagina's dubbel te tellen),
   // CPU = gemeten over ~1,2 s met een echte stopwatch en als % van je hele processor (alle kernen), voor app en recorder op dezelfde manier.

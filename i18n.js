@@ -47,6 +47,7 @@
     ['Opname opslaan…', 'Saving recording…'],
     ['Clip opslaan', 'Save clip'],
     ['Opname klaar', 'Ready to record'],
+    ['Wat wordt opgenomen', 'What will be recorded'],
     ['Wachten op game…', 'Waiting for game…'],
     ['Opnemen: {0}', 'Recording: {0}'],
 
