@@ -19,3 +19,7 @@ Desktop.ini
 # tijdelijke bestanden voor de promotie-plaatjes
 promo/bron/
 
+
+# log van een teststart
+starttest.log
+
