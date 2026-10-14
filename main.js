@@ -60,7 +60,9 @@ let volP = null, capProc = null, forceNoAudio = false, lastStart = 0, helperP = 
 let running = new Set(), S = DEF, proc = null, game = null, enc = null, win = null, tray = null, pruner = null;
 const jr = (f, d) => { try { return JSON.parse(fs.readFileSync(path.join(UD(), f))); } catch (e) { return d; } };
 const jw = (f, v) => fs.writeFileSync(path.join(UD(), f), JSON.stringify(v));
-const stamp = () => new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19);
+const SAFE = require('./clip-safe');
+// Tweede resolutie zou twee opnames in dezelfde seconde dezelfde naam geven: daarom een willekeurig einde.
+const stamp = () => new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19) + '-' + require('crypto').randomBytes(3).toString('hex');
 const run = (a, t = 30000) => new Promise(r => execFile(FF, a, { timeout: t }, e => r(!e)));
 const secs = () => (game && S.games[game] && S.games[game].seconds) || S.seconds;
 
@@ -420,8 +422,9 @@ function makeToast() {
   toastReady = false;
   toast = new BrowserWindow({ width: W, height: H, x: wa.x + wa.width - W - 12, y: wa.y + wa.height - H - 12, frame: false, transparent: true, alwaysOnTop: true,
     skipTaskbar: true, focusable: false, resizable: false, show: false, hasShadow: false,
-    webPreferences: { contextIsolation: true, backgroundThrottling: false, spellcheck: false, autoplayPolicy: 'no-user-gesture-required' } });
+    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false, spellcheck: false, autoplayPolicy: 'no-user-gesture-required' } });
   toast.setAlwaysOnTop(true, 'screen-saver'); toast.setIgnoreMouseEvents(true);
+  vastzetten(toast);
   toast.loadFile('toast.html');
   toast.webContents.once('did-finish-load', () => { toastReady = true; soundKey = ''; soundOk = false; syncSound(); toastGo(); });
 }
@@ -787,7 +790,8 @@ function region() {
 function openWin() {
   if (win) return win.focus();
   const wa0 = screen.getPrimaryDisplay().workAreaSize;
-  win = new BrowserWindow({ width: Math.min(1440, wa0.width), height: Math.min(900, wa0.height), minWidth: 900, minHeight: 600, backgroundColor: '#000000', show: false, autoHideMenuBar: true, frame: false, webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, spellcheck: false } });
+  win = new BrowserWindow({ width: Math.min(1440, wa0.width), height: Math.min(900, wa0.height), minWidth: 900, minHeight: 600, backgroundColor: '#000000', show: false, autoHideMenuBar: true, frame: false, webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true, spellcheck: false } });
+  vastzetten(win);
   win.once('ready-to-show', () => { if (win) win.show(); }); win.loadFile('index.html'); win.on('closed', () => (win = null));
 }
 
@@ -1127,14 +1131,19 @@ const H = {
       };
     }).sort((a, b) => b.t - a.t);
   } catch (e) { return []; } },
-  'clips:fav': n => { const m = jr('clips.json', {}); m[n] = Object.assign(m[n] || {}, { fav: !(m[n] || {}).fav }); jw('clips.json', m); if (m[n].fav) driveUp(n); return true; },
+  'clips:fav': n => {
+    if (!SAFE.safeClipName(n)) return false;
+    const m = jr('clips.json', {}); m[n] = Object.assign(m[n] || {}, { fav: !(m[n] || {}).fav }); jw('clips.json', m); if (m[n].fav) driveUp(n); return true;
+  },
   'clips:del': n => {
-    fs.rmSync(path.join(S.folder, n), { force: true });
-    try { fs.rmSync(path.join(UD(), 'thumbs', n + '.jpg'), { force: true }); } catch (e) {}
+    const vol = SAFE.clipPath(S.folder, n);
+    if (!vol) return false;
+    fs.rmSync(vol, { force: true });
+    try { fs.rmSync(path.join(UD(), 'thumbs', SAFE.safeClipName(n) + '.jpg'), { force: true }); } catch (e) {}
     const m = jr('clips.json', {}); delete m[n]; jw('clips.json', m);
     return true;
   },
-  'clips:open': n => { shell.showItemInFolder(path.join(S.folder, n)); return true; },
+  'clips:open': n => { const vol = SAFE.clipPath(S.folder, n); if (!vol) return false; shell.showItemInFolder(vol); return true; },
   'clip:save': () => { saveClip(); return true; },
   'folder:open': () => { fs.mkdirSync(S.folder, { recursive: true }); shell.openPath(S.folder); return true; },
   'drive:status': () => ({ connected: AUTH.driveOn(), auto: S.driveSync !== false, count: cloud.length, up, dn }),
@@ -1256,7 +1265,25 @@ const H = {
     return { uiRamMB: u ? u.ram : null, uiCpu: u ? u.cpu : null, ffRamMB: f ? f.ram : null, ffCpu: f ? f.cpu : null };
   }
 };
-ipcMain.handle('api', (e, n, a) => H[n](a, e));
+// Alleen het hoofdscherm mag API-aanroepen doen, en alleen voor een functie die echt in H staat.
+// Anders zou een willekeurige sleutel (bijv. 'constructor') als functie kunnen worden aangeroepen.
+ipcMain.handle('api', (e, n, a) => {
+  try {
+    if (!win || e.sender !== win.webContents) return false;
+    if (typeof n !== 'string' || !Object.prototype.hasOwnProperty.call(H, n)) return false;
+    if (typeof H[n] !== 'function') return false;
+    return H[n](a, e);
+  } catch (err) { return false; }
+});
+
+// Geen nieuwe vensters en geen navigatie weg van de eigen bestanden.
+function vastzetten(w) {
+  if (!w || !w.webContents) return w;
+  w.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  w.webContents.on('will-navigate', (ev, url) => { if (!String(url).startsWith('file://')) ev.preventDefault(); });
+  w.webContents.on('will-attach-webview', ev => ev.preventDefault());
+  return w;
+}
 function buildTray() {
   if (!tray) return;
   tray.setContextMenu(Menu.buildFromTemplate([{ label: tr('Open Wistic'), click: openWin }, { label: tr('Clip opslaan'), click: saveClip }, { label: tr('Opname starten / stoppen'), click: toggleLong }, { type: 'separator' }, { label: tr('Afsluiten'), click: () => { stopBuffer(); app.quit(); } }]));

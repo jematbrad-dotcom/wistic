@@ -17,6 +17,7 @@ const B2_KEEP = 8.5 * 1024 ** 3;         // B2 heeft 10 GB gratis; blijf daar ru
 const MAX_TOTAL = 13 * 1024 ** 3;        // samen R2_KEEP + B2_KEEP, dus 20 GB gratis in totaal
 const SOFT_TOTAL = 12.5 * 1024 ** 3;     // boven dit niveau ruimt de nachtelijke opruiming extra op
 const SOFT_TARGET = 11 * 1024 ** 3;      // opruimen stopt zodra de opslag onder dit niveau is
+const B2_MAX_ITEM = 40 * 1024 * 1024;   // grootste clip die naar B2 gaat: de hash moet in het geheugen passen
 const TTL_DAYS = 30, DAY = 86400000;
 const BOT = /bot|crawler|spider|discord|slack|telegram|whatsapp|facebookexternalhit|preview|embed/i;
 const JWKS_URL = 'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com';
@@ -25,7 +26,8 @@ const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, header
 const err = (m, s = 400) => json({ error: m }, s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const clean = (s, n) => String(s || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);
-const rid = () => { const a = new Uint8Array(8); crypto.getRandomValues(a); return [...a].map(x => 'abcdefghijkmnpqrstuvwxyz23456789ABCDEFGHJKLMNPQRSTUVWXYZ'[x % 57]).join(''); };
+const RID_ALPHABET = 'abcdefghijkmnpqrstuvwxyz23456789ABCDEFGHJKLMNPQRSTUVWXYZ';   // 56 tekens; % 57 zou soms 7 tekens geven en dan werkt de link niet
+const rid = () => { const a = new Uint8Array(8); crypto.getRandomValues(a); return [...a].map(x => RID_ALPHABET[x % RID_ALPHABET.length]).join(''); };
 const ID = '([A-Za-z0-9]{8})';
 
 // ---------- Inloggen: Firebase ID-token controleren ----------
@@ -119,16 +121,24 @@ async function init(req, env) {
   const b = await req.json().catch(() => ({})), size = Math.floor(+b.size || 0);
   if (!(size > 0)) return err('Ongeldige clip.');
   if (size > MAX_CLIP) return err('Deze clip is te groot om te delen (max 90 MB). Snij hem bij.', 413);
-  const mine = await env.DB.prepare('SELECT COUNT(*) n, COALESCE(SUM(size),0) s FROM clips WHERE uid=?').bind(me.uid).first();
-  if (mine.n >= MAX_USER_CLIPS) return err('Je hebt al ' + MAX_USER_CLIPS + ' gedeelde clips. Verwijder er eerst een.', 403);
-  if (mine.s + size > MAX_USER_BYTES) return err('Je deellimiet (1,5 GB) is vol. Verwijder eerst een gedeelde clip.', 403);
-  const all = await env.DB.prepare('SELECT COALESCE(SUM(size),0) s FROM clips').first();
-  if (all.s + size > MAX_TOTAL) return err('Er is op dit moment geen ruimte meer om te delen. Probeer het later opnieuw.', 507);
   await unTable(env); await storeCol(env);
   const un = await env.DB.prepare('SELECT name FROM usernames WHERE uid=?').bind(me.uid).first();
   const id = rid(), now = Date.now();
-  await env.DB.prepare('INSERT INTO clips (id,uid,author,title,game,size,created,last_viewed,store) VALUES (?,?,?,?,?,?,?,?,?)')
-    .bind(id, me.uid, (un && un.name) || me.name || 'Wistic', clean(b.title, 60), clean(b.game, 40), size, now, now, 'r2').run();
+  // De limieten staan ín de insert: zo tellen twee gelijktijdige uploads elkaar mee en kan niemand
+  // tegelijk over de grens. De select en de insert gebeuren als één statement.
+  const r = await env.DB.prepare(`INSERT INTO clips (id,uid,author,title,game,size,created,last_viewed,store)
+    SELECT ?,?,?,?,?,?,?,?,'r2' WHERE
+      (SELECT COUNT(*) FROM clips WHERE uid=?) < ? AND
+      (SELECT COALESCE(SUM(size),0) FROM clips WHERE uid=?) + ? <= ? AND
+      (SELECT COALESCE(SUM(size),0) FROM clips WHERE ready=1) + ? <= ?`)
+    .bind(id, me.uid, (un && un.name) || me.name || 'Wistic', clean(b.title, 60), clean(b.game, 40), size, now, now,
+      me.uid, MAX_USER_CLIPS, me.uid, size, MAX_USER_BYTES, size, MAX_TOTAL).run();
+  if (!r.meta || !r.meta.changes) {
+    const mine = await env.DB.prepare('SELECT COUNT(*) n, COALESCE(SUM(size),0) s FROM clips WHERE uid=?').bind(me.uid).first();
+    if (mine && mine.n >= MAX_USER_CLIPS) return err('Je hebt al ' + MAX_USER_CLIPS + ' gedeelde clips. Verwijder er eerst een.', 403);
+    if (mine && mine.s + size > MAX_USER_BYTES) return err('Je deellimiet (1,5 GB) is vol. Verwijder eerst een gedeelde clip.', 403);
+    return err('Er is op dit moment geen ruimte meer om te delen. Probeer het later opnieuw.', 507);
+  }
   return json({ id });
 }
 
@@ -340,6 +350,9 @@ async function migrate(env) {
   let moved = 0;
   for (const row of rows.results || []) {
     if (moved >= 400 * 1024 * 1024 || b2 + (+row.size || 0) > B2_KEEP) break;
+    // De handtekening voor B2 heeft de echte hash nodig, dus moet het bestand in het geheugen.
+    // Grote clips laten we daarom staan op R2: daar hoeft niets door het geheugen heen.
+    if (+row.size > B2_MAX_ITEM) continue;
     const v = await env.BUCKET.get('v/' + row.id + '.mp4');
     if (!v) { await env.DB.prepare("UPDATE clips SET store='b2' WHERE id=?").bind(row.id).run(); continue; }
     const t = await env.BUCKET.get('t/' + row.id + '.jpg');

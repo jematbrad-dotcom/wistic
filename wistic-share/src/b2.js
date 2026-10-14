@@ -73,8 +73,12 @@ async function send(env, method, key, body, extra) {
   return fetch(url(env, key), { method, headers, body });
 }
 
-// Bij schrijven moet het blokje bytes zijn (geen stream): de hash ervan gaat in de handtekening.
-export const b2Put = (env, key, body, contentType) => send(env, 'PUT', key, body, { 'content-type': contentType || 'application/octet-stream' });
+// Bij schrijven moet de inhoud als blok bytes binnen: de handtekening bevat de echte hash.
+// Een ReadableStream lezen we daarom eerst volledig in (B2_MAX_ITEM in index.js houdt dat klein).
+export const b2Put = async (env, key, body, contentType) => {
+  const bytes = body && typeof body.arrayBuffer === 'function' ? new Uint8Array(await body.arrayBuffer()) : body;
+  return send(env, 'PUT', key, bytes, { 'content-type': contentType || 'application/octet-stream' });
+};
 export const b2Delete = async (env, key) => { const r = await send(env, 'DELETE', key); return !!r && (r.ok || r.status === 404); };
 export async function b2Head(env, key) {
   const r = await send(env, 'HEAD', key);
