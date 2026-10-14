@@ -307,12 +307,12 @@ async function startBuffer2() {
   const lim = ',alimiter=limit=0.95';
   if (audioInputs === 2) {
     a.push(
-      '-filter_complex', `[1:a]aresample=44100:async=1,volume=${mg},aformat=sample_fmts=fltp:channel_layouts=stereo[a1];[2:a]aresample=44100:async=1,volume=${gg},aformat=sample_fmts=fltp:channel_layouts=stereo[a2];[a1][a2]amix=inputs=2:duration=first:dropout_transition=0:normalize=0${lim}[aout]`,
+      '-filter_complex', `[1:a]aresample=44100:async=1:first_pts=0,volume=${mg},aformat=sample_fmts=fltp:channel_layouts=stereo[a1];[2:a]aresample=44100:async=1:first_pts=0,volume=${gg},aformat=sample_fmts=fltp:channel_layouts=stereo[a2];[a1][a2]amix=inputs=2:duration=first:dropout_transition=0:normalize=0${lim}[aout]`,
       '-map', '0:v', '-map', '[aout]',
       '-c:a', 'aac', '-b:a', '192k', '-ar', '44100', '-ac', '2'
     );
   } else if (audioInputs === 1) {
-    a.push('-af', `aresample=44100:async=1,volume=${micOn ? mg : gg}${lim}`, '-c:a', 'aac', '-b:a', '128k', '-ar', '44100', '-ac', '2');
+    a.push('-af', `aresample=44100:async=1:first_pts=0,volume=${micOn ? mg : gg}${lim}`, '-c:a', 'aac', '-b:a', '128k', '-ar', '44100', '-ac', '2');
   }
 
   a.push(
@@ -496,9 +496,15 @@ async function saveClip() {
 
   // Alleen segmenten van de huidige bufferrun: oude restanten van eerder (bijv. na een mislukte opruiming) horen niet in een nieuwe clip.
   if (proc && lastStart && !lrec) f = f.filter(x => { try { return fs.statSync(path.join(BUF, x)).birthtimeMs >= lastStart - 3000; } catch (e) { return false; } });
-  // Het lopende deel (nog niet afgemaakt) nemen we straks mee tot precies het indrukmoment, zodat het laatste stukje niet wegvalt en de piep er niet in komt.
+  // Het lopende deel (nog niet afgemaakt) nemen we mee tot een stukje ná het indrukmoment, zodat het
+  // laatste geluid erin zit. Of dat bestand nog loopt, zien we aan hoe vers het is.
   let live = '';
-  if (proc && f.length > 1) live = f.pop();
+  if (proc && f.length) {
+    // Bepaald op hoe vers het bestand is, niet op het aantal: bij een bijna lege buffer werd het
+    // enige (nog lopende) bestand anders als afgelezen en werd de clip een seconde lang.
+    const kandidaat = f[f.length - 1];
+    try { if (Date.now() - fs.statSync(path.join(BUF, kandidaat)).mtimeMs < 1500) live = f.pop(); } catch (e) {}
+  }
   // Buffer uit of vastgelopen? Dan staan er nog oude segmenten van een eerdere sessie. Die slaan we niet op als "nieuwe" clip.
   let newest = 0;
   for (const x of f) { try { newest = Math.max(newest, fs.statSync(path.join(BUF, x)).mtimeMs); } catch (e) {} }
@@ -508,16 +514,23 @@ async function saveClip() {
     if (!proc) startBuffer();
     return;
   }
+  if (saving) { toastShow({ state: 'saving', title: 'Clip wordt al opgeslagen…', sub: 'Even wachten', pct: 0.5 }, 2500); return; }
+  saving = true;
   let liveSec = 0;
-  // Het beeld komt van gdigrab en is meteen goed, maar het geluid loopt via de mixer
-  // altijd een stuk achter. Lees je het lopende bestand meteen, dan ontbreekt de laatste
-  // seconde geluid. Daarom even wachten tot het geluid binnen is, en de clip daarvoor
-  // iets langer maken. In te stellen met audioTail in settings.json (0 = uit).
-  const tail = live ? Math.max(0, Math.min(4000, Number(S.audioTail) || 1000)) : 0;
-  if (tail) { try { toastShow({ state: 'saving', title: 'Clip opslaan…', sub: 'laatste seconde geluid', pct: 0.02 }); await new Promise(r => setTimeout(r, tail)); } catch (e) {} }
-  if (live) { try { liveSec = Math.min(SEG - 0.05, Math.max(0, (T0 - fs.statSync(path.join(BUF, live)).birthtimeMs) / 1000 - 0.15) + tail); } catch (e) {} if (liveSec < 0.5) live = ''; }
+  // De clip loopt door tot een tikje ná het indrukken. Geluid komt namelijk altijd een beetje achter
+  // de klop aan binnen: het hulpprogramma houdt er zo'n 200 ms aan, de microfoon en de codering
+  // nog wat. Wat er tussen de laatste letter en F8 gebeurde moet er gewoon in staan, dus we geven
+  // de clip een stukje extra.
+  const extra = 0.45;
+  const tail = Math.max(0, Math.min(4000, Number(S.audioTail) || 60)) / 1000;
+  if (live) { try { await new Promise(r => setTimeout(r, 800)); } catch (e) {} }
+  // Onze eigen piep moet buiten de clip vallen, dus die wacht tot de clip bij de knop is afgelopen.
+  beep();
+  // Het lopende stuk gaan we nooit meer weggooien: ook al is het nog geen halve seconde oud, het is
+  // het stuk vlak vóór de knop en dat wil je hebben. Alleen als er geen bestand is, valt het weg.
+  if (live) { try { liveSec = Math.max(0.2, Math.min(SEG - 0.05, (T0 - fs.statSync(path.join(BUF, live)).birthtimeMs) / 1000 + extra - tail)); } catch (e) {} }
   const pick = f.slice(-Math.max(1, Math.ceil((secs() - liveSec) / SEG)));
-  if (!pick.length) return;
+  if (!pick.length) { saving = false; try { toastShow({ state: 'err', title: 'Buffer vult nog even', sub: 'Geef het een seconde en probeer opnieuw', pct: 1 }, 2500); } catch (e) {} return; }
   // Pieptonen die eerder klonken (vorige clip, start van een opname) zitten nog in het geluid: die zetten we stil.
   let mute = '';
   try {
@@ -526,7 +539,6 @@ async function saveClip() {
     mute = parts.join(',');
   } catch (e) {}
 
-  if (saving) { toastShow({ state: 'saving', title: 'Clip wordt al opgeslagen…', sub: 'Even wachten', pct: 0.5 }, 2500); return; }
   saving = true;
   try {
     const list = path.join(BUF, 'list.txt');
@@ -537,7 +549,6 @@ async function saveClip() {
     const out = path.join(S.folder, name), part = out + '.part';
     const td = path.join(UD(), 'thumbs'); fs.mkdirSync(td, { recursive: true });
     const tp = path.join(td, name + '.jpg');
-    beep();
     let total = pick.length * SEG + (live ? liveSec : 0);
     toastShow({ state: 'saving', title: 'Clip opslaan…', sub: g, pct: 0.05 });
     const prog = p => toastShow({ pct: p });
